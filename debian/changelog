@@ -1,0 +1,5 @@
+gitea (1.1.0+git20170314.24.8746fb33-1) UNRELEASED; urgency=medium
+
+  * Initial release (Closes: #780606, #792101)
+
+ -- Michael Lustfield <michael@lustfield.net>  Tue, 14 Mar 2017 02:01:23 -0500

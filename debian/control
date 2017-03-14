@@ -1,0 +1,67 @@
+Source: gitea
+Section: devel
+Priority: extra
+Maintainer: Debian Go Packaging Team <pkg-go-maintainers@lists.alioth.debian.org>
+Uploaders: Michael Lustfield <michael@lustfield.net>
+Build-Depends: debhelper (>= 10),
+               dh-golang,
+               golang-any
+Standards-Version: 3.9.8
+Homepage: https://github.com/go-gitea/gitea
+Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/gitea.git
+Vcs-Git: https://anonscm.debian.org/git/pkg-go/packages/gitea.git
+XS-Go-Import-Path: code.gitea.io/gitea
+
+Package: gitea
+Architecture: any
+Built-Using: ${misc:Built-Using}
+Depends: ${shlibs:Depends},
+         ${misc:Depends}
+Description: Painless self-hosted git service
+ Gitea is a self-hosted git service aiming to provide a full suite of
+ features similar to Gitlab or Github. It aims to be light weight,
+ feature rich, and easily maintained.
+ .
+ Features:
+   * User dashboard:
+     + Context switching (organization / current user)
+     + Activity timeline
+     + Repository list
+   * Issues dashboard
+   * Pull requests
+   * Notification (web / email)
+   * Repository types
+     + Mirror
+     + Normal
+     + Migrated
+   * Custom templates
+   * TLS support
+   * Detailed logging
+   * Database support:
+     + MySQL
+     + PostgreSQL
+     + SQLite3
+     + MSSQL
+     + TiDB
+   * Admin panel(s)
+     + Repository/Organization/User management
+     + Statisticts
+     + Server status
+     + System notices
+   * Authentication sources:
+     + OAuth
+     + PAM
+     + LDAP
+     + SMTP
+   * Multi-language support
+   * Release management / issue (ticket) tracking
+     + Milestones
+     + Labels
+     + Assign
+     + Search / sort / filter
+     + Comments / attachments
+     + Pull requests
+   * Project wiki
+   * Per-project settings
+ .
+ Documentation: https://docs.gitea.io/en-US/
