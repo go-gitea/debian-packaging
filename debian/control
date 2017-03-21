@@ -5,7 +5,8 @@ Maintainer: Debian Go Packaging Team <pkg-go-maintainers@lists.alioth.debian.org
 Uploaders: Michael Lustfield <michael@lustfield.net>
 Build-Depends: debhelper (>= 10),
                dh-golang,
-               golang-any
+               golang-any,
+               # TODO # big pile of these
 Standards-Version: 3.9.8
 Homepage: https://github.com/go-gitea/gitea
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/gitea.git
@@ -16,7 +17,8 @@ Package: gitea
 Architecture: any
 Built-Using: ${misc:Built-Using}
 Depends: ${shlibs:Depends},
-         ${misc:Depends}
+         ${misc:Depends},
+         git
 Description: Painless self-hosted git service
  Gitea is a self-hosted git service aiming to provide a full suite of
  features similar to Gitlab or Github. It aims to be light weight,
