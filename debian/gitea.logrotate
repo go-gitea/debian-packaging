@@ -1,0 +1,14 @@
+/var/log/gitea/*.log {
+	daily
+	missingok
+	rotate 14
+	compress
+	delaycompress
+	notifempty
+	create 0640 gitea adm
+	sharedscripts
+	postrotate
+		# Not sure...
+		invoke-rc.d nginx restart >/dev/null 2>&1
+	endscript
+}

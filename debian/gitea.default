@@ -1,0 +1,4 @@
+# Define the stop schedule for gitea
+# see the start-stop-daemon --retry documentation for more information
+#
+#STOP_SCHEDULE="QUIT/5/TERM/1/KILL/5"

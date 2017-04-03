@@ -1,0 +1,26 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    purge)
+        rm -rf /var/log/gitea /etc/gitea
+        if [ "$(ls -A /var/lib/gitea/repositories/)" ]; then
+            echo 'NOTICE: Will not remove /var/lib/gitea/repositories. It is not empty!'
+            rm -rf /var/lib/gitea/data /var/lib/gitea/conf
+        else
+            rm -rf /var/lib/gitea/
+        fi
+        ;;
+
+    upgrade|remove|failed-upgrade|abort-install|abort-upgrade|disappear)
+        ;;
+
+    *)
+        echo "postrm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

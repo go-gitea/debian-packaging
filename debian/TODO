@@ -10,3 +10,10 @@ There should be a migration document included.
 
 
 [0] https://gist.github.com/MTecknology/64149c25fe230ca97c6231050de620b8
+
+--
+
+gitea user needs write access to these directories:
+var/lib/gitea/data
+var/lib/gitea/repositories
+var/log/gitea
