@@ -1,0 +1,40 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        logdir="/var/log/gitea"
+        # Allow local admin to override
+        if ! dpkg-statoverride --list "$logdir" >/dev/null; then
+            chown root:adm $logdir
+            chmod 0755 $logdir
+        fi
+        if [ -z "$2" ]; then
+            # Logrotate maintains these permissions
+            for file in gitea.log http.log xorm.log; do
+                if [ ! -e "$logdir/$file" ]; then
+                    touch "$logdir/$file"
+                    chmod 640 "$logdir/$file"
+                    chown gitea:adm "$logdir/$file"
+                fi
+            done
+            # Create a config symlink if one does not exist
+            if [ -f '/etc/gitea/app.ini' ] && [ -d '/var/lib/gitea/custom/conf' ] &&
+               [ ! -e '/var/lib/gitea/custom/conf/app.ini' ]; then
+                ln -s /var/lib/gitea/custom/conf/app.ini /etc/gitea/app.ini
+            fi
+        fi
+    ;;
+
+  abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

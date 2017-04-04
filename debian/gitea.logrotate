@@ -8,7 +8,7 @@
 	create 0640 gitea adm
 	sharedscripts
 	postrotate
-		# Not sure...
-		invoke-rc.d nginx restart >/dev/null 2>&1
+		# https://github.com/go-gitea/gitea/issues/1437
+		invoke-rc.d gitea restart >/dev/null 2>&1
 	endscript
 }
