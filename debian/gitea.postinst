@@ -11,7 +11,7 @@ case "$1" in
         fi
         if [ -z "$2" ]; then
             # Logrotate maintains these permissions
-            for file in gitea.log http.log xorm.log; do
+            for file in error.log gitea.log http.log xorm.log; do
                 if [ ! -e "$logdir/$file" ]; then
                     touch "$logdir/$file"
                     chmod 640 "$logdir/$file"
