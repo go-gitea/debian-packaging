@@ -24,7 +24,11 @@ case "$1" in
                 ln -s /var/lib/gitea/custom/conf/app.ini /etc/gitea/app.ini
             fi
         fi
-    ;;
+        # Create service user for gitea
+        addgroup --system --quiet gitea
+        adduser --system --quiet --ingroup gitea --no-create-home gitea
+        [ -d '/var/lib/gitea' ] && chown -R gitea:gitea /var/lib/gitea
+        ;;
 
   abort-upgrade|abort-remove|abort-deconfigure)
         ;;

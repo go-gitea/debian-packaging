@@ -3,6 +3,7 @@ set -e
 
 case "$1" in
     purge)
+        deluser --system --quiet gitea || true
         rm -rf /var/log/gitea /etc/gitea
         if [ "$(ls -A /var/lib/gitea/repositories/)" ]; then
             echo 'NOTICE: Will not remove /var/lib/gitea/repositories. It is not empty!'
