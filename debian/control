@@ -123,9 +123,9 @@ Build-Depends: debhelper (>= 10),
                golang-gopkg-redis.v2-dev,
                golang-gopkg-testfixtures.v2-dev,
                golang-goprotobuf-dev,
-               golang-goyaml-dev,
+               golang-gopkg-yaml.v2-dev,
                golang-strk.kbt-projects-go-libravatar-dev,
-               golang-ugorji-go-dev
+               golang-github-ugorji-go-codec-dev
 Standards-Version: 3.9.8
 Homepage: https://github.com/go-gitea/gitea
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/gitea.git
