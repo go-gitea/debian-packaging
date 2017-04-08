@@ -1,4 +1,4 @@
-gitea (1.1.0+git20170314.24.8746fb33-1) UNRELEASED; urgency=medium
+gitea (1.1.0+git20170408.114.edbb9eef-1) UNRELEASED; urgency=medium
 
   * Initial release (Closes: #780606, #792101)
 
