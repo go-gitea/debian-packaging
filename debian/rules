@@ -2,3 +2,6 @@
 
 %:
 	dh $@ --buildsystem=golang --with=golang
+
+# Tests are broken by the debian build environment
+override_dh_auto_test:
