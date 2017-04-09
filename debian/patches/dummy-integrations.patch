@@ -1,0 +1,5 @@
+Adding a dummy package that prevents issues with dh magic.
+--- /dev/null
++++ b/integrations/dummy.go
+@@ -0,0 +1 @@
++package integrations
