@@ -1,6 +1,8 @@
 [Unit]
 Description=Gitea (Git with a cup of tea)
-After=syslog.target
+Documentation=man:gitea(1)
+# syslog is "socket activated"
+#After=syslog.target
 After=network.target
 #After=mysqld.service
 #After=postgresql.service
@@ -17,6 +19,7 @@ After=network.target
 Type=simple
 User=gitea
 Group=gitea
+Documentation=man:gitea(1)
 WorkingDirectory=/var/lib/gitea
 ExecStart=/usr/bin/gitea web
 Restart=always

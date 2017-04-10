@@ -26,7 +26,7 @@ case "$1" in
         fi
         # Create service user for gitea
         addgroup --system --quiet gitea
-        adduser --system --quiet --ingroup gitea --no-create-home gitea
+        adduser --system --quiet --ingroup gitea --no-create-home --home /var/lib/gitea gitea
         [ -d '/var/lib/gitea' ] && chown -R gitea:gitea /var/lib/gitea
         ;;
 
