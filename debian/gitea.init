@@ -75,7 +75,7 @@ case "$1" in
     status)
         do_status
         ;;
-    restart)
+    restart|force-reload)
         echo "Restarting $DESC" "$NAME"
         do_stop
         do_start
