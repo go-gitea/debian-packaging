@@ -1,15 +1,15 @@
 #!/bin/sh
 ### BEGIN INIT INFO
 # Provides:          gitea
-# Required-Start:    $syslog $network
-# Required-Stop:     $syslog
+# Required-Start:    $local_fs $remote_fs $network
+# Required-Stop:     $local_fs $remote_fs $network
+# Should-Start:      $syslog
+# Should-Stop:       $syslog
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: A self-hosted Git service written in Go.
+# Short-Description: gitea daemon
 # Description:       A self-hosted Git service written in Go.
 ### END INIT INFO
-
-# Author: Danny Boisvert
 
 # Do NOT "set -e"
 
@@ -32,6 +32,9 @@ STOP_SCHEDULE="${STOP_SCHEDULE:-QUIT/5/TERM/1/KILL/5}"
 
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 0
+
+[ -f /lib/lsb/init-functions ] || exit 1
+. /lib/lsb/init-functions
 
 do_start()
 {
