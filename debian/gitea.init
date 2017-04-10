@@ -33,8 +33,7 @@ STOP_SCHEDULE="${STOP_SCHEDULE:-QUIT/5/TERM/1/KILL/5}"
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 0
 
-[ -f /lib/lsb/init-functions ] || exit 1
-. /lib/lsb/init-functions
+[ -f /lib/lsb/init-functions ] && . /lib/lsb/init-functions
 
 do_start()
 {
