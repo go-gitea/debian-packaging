@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 PACKAGES ?= $(addprefix code.gitea.io/gitea/,$(filter-out integrations,$(shell go list ./... | grep -v vendor/ | sed -n 's/^.*gitea\///p')))
-GOPATH ?= $(PWD)/obj-$(DEB_TARGET_GNU_TYPE)
+GOPATH ?= $(CURDIR)/obj-$(DEB_TARGET_GNU_TYPE)
 export GOPATH
 
 %:
