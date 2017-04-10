@@ -8,7 +8,7 @@ export GOPATH
 	dh $@ --buildsystem=golang --with=golang
 
 override_dh_auto_build:
-	go install -v -p 4 code.gitea.io/gitea $(PACKAGES)
+	go install -buildmode=pie -pkgdir=$(GOPATH) -v -p 4 code.gitea.io/gitea $(PACKAGES)
 
 # Tests are broken by the debian build environment
 override_dh_auto_test:
