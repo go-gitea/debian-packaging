@@ -1,7 +1,14 @@
 #!/usr/bin/make -f
 
+PACKAGES ?= $(addprefix code.gitea.io/gitea/,$(filter-out integrations,$(shell go list ./... | grep -v vendor/ | sed -n 's/^.*gitea\///p')))
+GOPATH ?= $(PWD)/obj-$(DEB_TARGET_GNU_TYPE)
+export GOPATH
+
 %:
 	dh $@ --buildsystem=golang --with=golang
+
+override_dh_auto_build:
+	go install -v -p 4 code.gitea.io/gitea $(PACKAGES)
 
 # Tests are broken by the debian build environment
 override_dh_auto_test:
