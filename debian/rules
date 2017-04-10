@@ -1,6 +1,5 @@
 #!/usr/bin/make -f
-#export DEB_BUILD_MAINT_OPTIONS = hardening=+all
-#LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
+DEB_BUILD_HARDENING_FORTIFY = 1
 GO_LDFLAGS += -extldflags=-Wl,-z,now,-z,relro
 
 PACKAGES ?= $(addprefix code.gitea.io/gitea/,$(filter-out integrations,$(shell go list ./... | grep -v vendor/ | sed -n 's/^.*gitea\///p')))
