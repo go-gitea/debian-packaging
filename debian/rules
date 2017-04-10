@@ -1,4 +1,7 @@
 #!/usr/bin/make -f
+#export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+#LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
+GO_LDFLAGS += -extldflags=-Wl,-z,now,-z,relro
 
 PACKAGES ?= $(addprefix code.gitea.io/gitea/,$(filter-out integrations,$(shell go list ./... | grep -v vendor/ | sed -n 's/^.*gitea\///p')))
 GOPATH ?= $(CURDIR)/obj-$(DEB_TARGET_GNU_TYPE)
@@ -8,7 +11,11 @@ export GOPATH
 	dh $@ --buildsystem=golang --with=golang
 
 override_dh_auto_build:
-	go install -buildmode=pie -pkgdir=$(GOPATH) -v -p 4 code.gitea.io/gitea $(PACKAGES)
+	go install -v -p 4 \
+		-buildmode=pie \
+		-pkgdir=$(GOPATH) \
+		-ldflags '-s -w $(GO_LDFLAGS)' \
+		code.gitea.io/gitea $(PACKAGES)
 
 # Tests are broken by the debian build environment
 override_dh_auto_test:
