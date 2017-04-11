@@ -1,6 +1,14 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: gitea
 Source: https://github.com/go-gitea/gitea
+Files-Excluded: public/assets/font-awesome-*
+                public/assets/octicons-*
+                public/css/*.min.css
+                public/css/gitgraph.css
+                public/js/draw.js
+                public/js/*.min.js
+                public/js/libs/*
+                public/plugins/*
 
 Files: *
 Copyright: 2016 The Gitea Authors
