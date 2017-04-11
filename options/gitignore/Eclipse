@@ -1,5 +1,6 @@
-
+*.pydevproject
 .metadata
+.gradle
 bin/
 tmp/
 *.tmp
@@ -9,7 +10,6 @@ tmp/
 local.properties
 .settings/
 .loadpath
-.recommenders
 
 # Eclipse Core
 .project
@@ -20,10 +20,7 @@ local.properties
 # Locally stored "Eclipse launch configurations"
 *.launch
 
-# PyDev specific (Python IDE for Eclipse)
-*.pydevproject
-
-# CDT-specific (C/C++ Development Tooling)
+# CDT-specific
 .cproject
 
 # JDT-specific (Eclipse Java Development Tools)
@@ -32,25 +29,11 @@ local.properties
 # Java annotation processor (APT)
 .factorypath
 
-# PDT-specific (PHP Development Tools)
+# PDT-specific
 .buildpath
 
 # sbteclipse plugin
 .target
 
-# Tern plugin
-.tern-project
-
 # TeXlipse plugin
 .texlipse
-
-# STS (Spring Tool Suite)
-.springBeans
-
-# Code Recommenders
-.recommenders/
-
-# Scala IDE specific (Scala & Java development for Eclipse)
-.cache-main
-.scala_dependencies
-.worksheet

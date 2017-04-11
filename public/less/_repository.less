@@ -800,31 +800,8 @@
 				padding-left: 15px;
 			}
 			.sha {
-				text-align: center;
-				width: 140px;
-			}
-		}
-		td.sha{
-			.sha.label{
-				margin: 0;
-				&.isSigned{
-					border: 1px solid #BBB;
-					.detail.icon{
-						background: #FAFAFA;
-						margin: -6px -10px -4px 0px;
-						padding: 5px 3px 5px 6px;
-						border-left: 1px solid #BBB;
-						border-top-left-radius: 0;
-						border-bottom-left-radius: 0;
-					}
-				}
-				&.isSigned.isVerified{
-					border: 1px solid #21BA45;
-					background: #21BA4518;
-					.detail.icon{
-						border-left: 1px solid #21BA4580;
-					}
-				}
+				font-size: 13px;
+				padding: 6px 40px 4px 35px;
 			}
 		}
 		&.ui.basic.striped.table tbody tr:nth-child(2n) {
@@ -1229,18 +1206,6 @@
 			}
 		}
 	}
-	.ui.attached.isSigned.isVerified{
-        &:not(.positive){
-		    border-left: 1px solid #A3C293;
-		    border-right: 1px solid #A3C293;
-	    }
-	    &.top:not(.positive){
-		    border-top: 1px solid #A3C293;
-	    }
-        &:not(.positive):last-child {
-            border-bottom: 1px solid #A3C293;
-        }
-	}
 }
 // End of .repository
 
@@ -1294,10 +1259,6 @@
 			}
 		}
 	}
-}
-
-.issue-actions {
-    display: none;
 }
 
 .issue.list {
@@ -1362,41 +1323,79 @@
 			box-shadow: 0 1px 2px 0 rgba(34,36,38,.15);
 		}
 	}
-	.list {
-		> .item {
-			.green {
-				color: #21BA45 !important;
+	.key.list {
+		.item:not(:first-child) {
+			border-top: 1px solid #eaeaea;
+		}
+		.ssh-key-state-indicator {
+			float: left;
+			color: gray;
+			padding-left: 10px;
+			padding-top: 10px;
+			&.active {
+				color: #6cc644;
 			}
-			&:not(:first-child) {
-				border-top: 1px solid #eaeaea;
-				padding:1rem;
-				margin: 15px -1rem -1rem -1rem;
+		}
+		.meta {
+			padding-top: 5px;
+		}
+		.print {
+			color: #767676;
+		}
+		.activity {
+			color: #666;
+		}
+	}
+	.hook.list {
+		> .item:not(:first-child) {
+			border-top: 1px solid #eaeaea;
+		}
+		.item {
+			padding: 10px 20px;
+			.octicon,
+			.fa {
+				width: 20px;
+				text-align: center;
 			}
-			> .mega-octicon {
-				display: table-cell;
+			a {
+				.dont-break-out;
 			}
-			> .mega-octicon + .content {
-				display: table-cell;
-				padding: 0 0 0 .5em;
-				vertical-align: top;
+		}
+	}
+	.hook.history.list {
+		.item {
+			padding-left: 13px;
+			.meta {
+				.ui.right {
+					margin-top: 5px;
+					.time {
+						font-size: 12px;
+					}
+				}
 			}
 			.info {
 				margin-top: 10px;
+				.tabular.menu {
+					.item {
+						font-weight: 500;
+					}
+				}
 				.tab.segment {
 					border: none;
-					padding: 10px 0 0;
+					padding: 0;
+					padding-top: 10px;
+					box-shadow: none;
+					> * {
+						color: #666;
+					}
+					pre {
+						word-wrap: break-word;
+						.hljs {
+							padding: 0;
+							background-color: inherit;
+						}
+					}
 				}
-			}
-		}
-		&.key{
-			.meta {
-				padding-top: 5px;
-				color: #666;
-			}
-		}
-		&.email {
-			> .item:not(:first-child) {
-				min-height: 60px;
 			}
 		}
 	}

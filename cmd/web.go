@@ -200,19 +200,6 @@ func runWeb(ctx *cli.Context) error {
 	m.Group("/user", func() {
 		m.Get("/login", user.SignIn)
 		m.Post("/login", bindIgnErr(auth.SignInForm{}), user.SignInPost)
-		if setting.Service.EnableOpenIDSignIn {
-			m.Combo("/login/openid").
-				Get(user.SignInOpenID).
-				Post(bindIgnErr(auth.SignInOpenIDForm{}), user.SignInOpenIDPost)
-			m.Group("/openid", func() {
-				m.Combo("/connect").
-					Get(user.ConnectOpenID).
-					Post(bindIgnErr(auth.ConnectOpenIDForm{}), user.ConnectOpenIDPost)
-				m.Combo("/register").
-					Get(user.RegisterOpenID).
-					Post(bindIgnErr(auth.SignUpOpenIDForm{}), user.RegisterOpenIDPost)
-			})
-		}
 		m.Get("/sign_up", user.SignUp)
 		m.Post("/sign_up", bindIgnErr(auth.RegisterForm{}), user.SignUpPost)
 		m.Get("/reset_password", user.ResetPasswd)
@@ -243,15 +230,6 @@ func runWeb(ctx *cli.Context) error {
 		m.Post("/email/delete", user.DeleteEmail)
 		m.Get("/password", user.SettingsPassword)
 		m.Post("/password", bindIgnErr(auth.ChangePasswordForm{}), user.SettingsPasswordPost)
-		if setting.Service.EnableOpenIDSignIn {
-			m.Group("/openid", func() {
-				m.Combo("").Get(user.SettingsOpenID).
-					Post(bindIgnErr(auth.AddOpenIDForm{}), user.SettingsOpenIDPost)
-				m.Post("/delete", user.DeleteOpenID)
-				m.Post("/toggle_visibility", user.ToggleOpenIDVisibility)
-			})
-		}
-
 		m.Combo("/ssh").Get(user.SettingsSSHKeys).
 			Post(bindIgnErr(auth.AddSSHKeyForm{}), user.SettingsSSHKeysPost)
 		m.Post("/ssh/delete", user.DeleteSSHKey)
@@ -276,8 +254,8 @@ func runWeb(ctx *cli.Context) error {
 		m.Any("/activate", user.Activate)
 		m.Any("/activate_email", user.ActivateEmail)
 		m.Get("/email2user", user.Email2User)
-		m.Get("/forgot_password", user.ForgotPasswd)
-		m.Post("/forgot_password", user.ForgotPasswdPost)
+		m.Get("/forget_password", user.ForgotPasswd)
+		m.Post("/forget_password", user.ForgotPasswdPost)
 		m.Get("/logout", user.SignOut)
 	})
 	// ***** END: User *****
@@ -449,7 +427,7 @@ func runWeb(ctx *cli.Context) error {
 				m.Combo("").Get(repo.ProtectedBranch).Post(repo.ProtectedBranchPost)
 				m.Post("/can_push", repo.ChangeProtectedBranch)
 				m.Post("/delete", repo.DeleteProtectedBranch)
-			}, repo.MustBeNotBare)
+			})
 
 			m.Group("/hooks", func() {
 				m.Get("", repo.Webhooks)
@@ -489,16 +467,16 @@ func runWeb(ctx *cli.Context) error {
 				Post(bindIgnErr(auth.CreateIssueForm{}), repo.NewIssuePost)
 
 			m.Group("/:index", func() {
+				m.Post("/label", repo.UpdateIssueLabel)
+				m.Post("/milestone", repo.UpdateIssueMilestone)
+				m.Post("/assignee", repo.UpdateIssueAssignee)
+			}, reqRepoWriter)
+
+			m.Group("/:index", func() {
 				m.Post("/title", repo.UpdateIssueTitle)
 				m.Post("/content", repo.UpdateIssueContent)
-				m.Post("/watch", repo.IssueWatch)
 				m.Combo("/comments").Post(bindIgnErr(auth.CreateCommentForm{}), repo.NewComment)
 			})
-
-			m.Post("/labels", repo.UpdateIssueLabel, reqRepoWriter)
-			m.Post("/milestone", repo.UpdateIssueMilestone, reqRepoWriter)
-			m.Post("/assignee", repo.UpdateIssueAssignee, reqRepoWriter)
-			m.Post("/status", repo.UpdateIssueStatus, reqRepoWriter)
 		})
 		m.Group("/comments/:id", func() {
 			m.Post("", repo.UpdateCommentContent)
@@ -522,11 +500,11 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("/new", repo.NewRelease)
 			m.Post("/new", bindIgnErr(auth.NewReleaseForm{}), repo.NewReleasePost)
 			m.Post("/delete", repo.DeleteRelease)
-		}, repo.MustBeNotBare, reqRepoWriter, context.RepoRef())
+		}, reqRepoWriter, context.RepoRef())
 		m.Group("/releases", func() {
 			m.Get("/edit/*", repo.EditRelease)
 			m.Post("/edit/*", bindIgnErr(auth.EditReleaseForm{}), repo.EditReleasePost)
-		}, repo.MustBeNotBare, reqRepoWriter, func(ctx *context.Context) {
+		}, reqRepoWriter, func(ctx *context.Context) {
 			var err error
 			ctx.Repo.Commit, err = ctx.Repo.GitRepo.GetBranchCommit(ctx.Repo.Repository.DefaultBranch)
 			if err != nil {
@@ -565,17 +543,17 @@ func runWeb(ctx *cli.Context) error {
 					return
 				}
 			})
-		}, repo.MustBeNotBare, reqRepoWriter, context.RepoRef(), func(ctx *context.Context) {
+		}, reqRepoWriter, context.RepoRef(), func(ctx *context.Context) {
 			if !ctx.Repo.Repository.CanEnableEditor() || ctx.Repo.IsViewCommit {
 				ctx.Handle(404, "", nil)
 				return
 			}
 		})
-	}, reqSignIn, context.RepoAssignment(), context.UnitTypes())
+	}, reqSignIn, context.RepoAssignment(), repo.MustBeNotBare, context.UnitTypes())
 
 	m.Group("/:username/:reponame", func() {
 		m.Group("", func() {
-			m.Get("/releases", repo.MustBeNotBare, repo.Releases)
+			m.Get("/releases", repo.Releases)
 			m.Get("/^:type(issues|pulls)$", repo.RetrieveLabels, repo.Issues)
 			m.Get("/^:type(issues|pulls)$/:index", repo.ViewIssue)
 			m.Get("/labels/", repo.RetrieveLabels, repo.Labels)
@@ -583,7 +561,7 @@ func runWeb(ctx *cli.Context) error {
 		}, context.RepoRef())
 
 		// m.Get("/branches", repo.Branches)
-		m.Post("/branches/:name/delete", reqSignIn, reqRepoWriter, repo.MustBeNotBare, repo.DeleteBranchPost)
+		m.Post("/branches/:name/delete", reqSignIn, reqRepoWriter, repo.DeleteBranchPost)
 
 		m.Group("/wiki", func() {
 			m.Get("/?:page", repo.Wiki)
@@ -603,7 +581,7 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("/*", repo.WikiRaw)
 		}, repo.MustEnableWiki)
 
-		m.Get("/archive/*", repo.MustBeNotBare, repo.Download)
+		m.Get("/archive/*", repo.Download)
 
 		m.Group("/pulls/:index", func() {
 			m.Get("/commits", context.RepoRef(), repo.ViewPullCommits)
@@ -619,10 +597,10 @@ func runWeb(ctx *cli.Context) error {
 			m.Get("/commit/:sha([a-f0-9]{7,40})$", repo.SetEditorconfigIfExists, repo.SetDiffViewStyle, repo.Diff)
 			m.Get("/forks", repo.Forks)
 		}, context.RepoRef())
-		m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", repo.MustBeNotBare, repo.RawDiff)
+		m.Get("/commit/:sha([a-f0-9]{7,40})\\.:ext(patch|diff)", repo.RawDiff)
 
-		m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.SetEditorconfigIfExists, repo.SetDiffViewStyle, repo.MustBeNotBare, repo.CompareDiff)
-	}, ignSignIn, context.RepoAssignment(), context.UnitTypes())
+		m.Get("/compare/:before([a-z0-9]{40})\\.\\.\\.:after([a-z0-9]{40})", repo.SetEditorconfigIfExists, repo.SetDiffViewStyle, repo.CompareDiff)
+	}, ignSignIn, context.RepoAssignment(), repo.MustBeNotBare, context.UnitTypes())
 	m.Group("/:username/:reponame", func() {
 		m.Get("/stars", repo.Stars)
 		m.Get("/watchers", repo.Watchers)
@@ -632,7 +610,7 @@ func runWeb(ctx *cli.Context) error {
 		m.Group("/:reponame", func() {
 			m.Get("", repo.SetEditorconfigIfExists, repo.Home)
 			m.Get("\\.git$", repo.SetEditorconfigIfExists, repo.Home)
-		}, ignSignIn, context.RepoAssignment(), context.RepoRef(), context.UnitTypes())
+		}, ignSignIn, context.RepoAssignment(true), context.RepoRef(), context.UnitTypes())
 
 		m.Group("/:reponame", func() {
 			m.Group("/info/lfs", func() {
@@ -640,9 +618,6 @@ func runWeb(ctx *cli.Context) error {
 				m.Get("/objects/:oid/:filename", lfs.ObjectOidHandler)
 				m.Any("/objects/:oid", lfs.ObjectOidHandler)
 				m.Post("/objects", lfs.PostHandler)
-				m.Any("/*", func(ctx *context.Context) {
-					ctx.Handle(404, "", nil)
-				})
 			}, ignSignInAndCsrf)
 			m.Any("/*", ignSignInAndCsrf, repo.HTTP)
 			m.Head("/tasks/trigger", repo.TriggerTask)
@@ -702,12 +677,7 @@ func runWeb(ctx *cli.Context) error {
 	case setting.HTTPS:
 		err = runHTTPS(listenAddr, setting.CertFile, setting.KeyFile, context2.ClearHandler(m))
 	case setting.FCGI:
-		listener, err := net.Listen("tcp", listenAddr)
-		if err != nil {
-			log.Fatal(4, "Failed to bind %s", listenAddr, err)
-		}
-		defer listener.Close()
-		err = fcgi.Serve(listener, context2.ClearHandler(m))
+		err = fcgi.Serve(nil, context2.ClearHandler(m))
 	case setting.UnixSocket:
 		if err := os.Remove(listenAddr); err != nil && !os.IsNotExist(err) {
 			log.Fatal(4, "Failed to remove unix socket directory %s: %v", listenAddr, err)

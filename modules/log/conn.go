@@ -42,7 +42,7 @@ func (cw *ConnWriter) WriteMsg(msg string, skip, level int) error {
 	if cw.Level > level {
 		return nil
 	}
-	if cw.neededConnectOnMsg() {
+	if cw.neddedConnectOnMsg() {
 		if err := cw.connect(); err != nil {
 			return err
 		}
@@ -87,7 +87,7 @@ func (cw *ConnWriter) connect() error {
 	return nil
 }
 
-func (cw *ConnWriter) neededConnectOnMsg() bool {
+func (cw *ConnWriter) neddedConnectOnMsg() bool {
 	if cw.Reconnect {
 		cw.Reconnect = false
 		return true

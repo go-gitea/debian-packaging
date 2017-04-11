@@ -5,7 +5,6 @@
 
 
 	  <div id="git-graph-container" class="ui segment">
-		  <h1>{{.i18n.Tr "repo.commit_graph"}}</h1>
 	    <div id="rel-container">
 	      <canvas id="graph-canvas">
 		<ul id="graph-raw-list">
@@ -26,7 +25,7 @@
 		    <a href="{{AppSubUrl}}/{{$.Username}}/{{$.Reponame}}/commit/{{.Rev}}">{{ .ShortRev}}</a>
 		  </code>
 		  <strong> {{.Branch}}</strong>
-		  <em>{{RenderCommitMessage false .Subject $.RepoLink $.Repository.ComposeMetas}}</em> by
+		  <em>{{.Subject}}</em> by
 		  <span class="author">
 		    {{.Author}}
 		  </span>

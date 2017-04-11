@@ -72,7 +72,6 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 			err := models.NewRepoRedirect(ctx.Repo.Owner.ID, repo.ID, repo.Name, newRepoName)
 			if err != nil {
 				ctx.Handle(500, "NewRepoRedirect", err)
-				return
 			}
 
 			log.Trace("Repository name changed: %s/%s -> %s", ctx.Repo.Owner.Name, repo.Name, newRepoName)
@@ -152,12 +151,6 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 
 		if form.EnableWiki {
 			if form.EnableExternalWiki {
-				if !strings.HasPrefix(form.ExternalWikiURL, "http://") && !strings.HasPrefix(form.ExternalWikiURL, "https://") {
-					ctx.Flash.Error(ctx.Tr("repo.settings.external_wiki_url_error"))
-					ctx.Redirect(repo.Link() + "/settings")
-					return
-				}
-
 				units = append(units, models.RepoUnit{
 					RepoID: repo.ID,
 					Type:   models.UnitTypeExternalWiki,
@@ -178,15 +171,10 @@ func SettingsPost(ctx *context.Context, form auth.RepoSettingForm) {
 
 		if form.EnableIssues {
 			if form.EnableExternalTracker {
-				if !strings.HasPrefix(form.ExternalTrackerURL, "http://") && !strings.HasPrefix(form.ExternalTrackerURL, "https://") {
-					ctx.Flash.Error(ctx.Tr("repo.settings.external_tracker_url_error"))
-					ctx.Redirect(repo.Link() + "/settings")
-					return
-				}
 				units = append(units, models.RepoUnit{
 					RepoID: repo.ID,
-					Type:   models.UnitTypeExternalTracker,
-					Index:  int(models.UnitTypeExternalTracker),
+					Type:   models.UnitTypeExternalWiki,
+					Index:  int(models.UnitTypeExternalWiki),
 					Config: &models.ExternalTrackerConfig{
 						ExternalTrackerURL:    form.ExternalTrackerURL,
 						ExternalTrackerFormat: form.TrackerURLFormat,

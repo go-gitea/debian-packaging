@@ -36,7 +36,7 @@ func (q *UniqueQueue) Queue() <-chan string {
 	return q.queue
 }
 
-// Exist returns true if there is an instance with given identity
+// Exist returns true if there is an instance with given indentity
 // exists in the queue.
 func (q *UniqueQueue) Exist(id interface{}) bool {
 	return q.table.IsRunning(com.ToStr(id))

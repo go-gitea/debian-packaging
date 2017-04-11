@@ -1,1 +1,47 @@
 .pc
+# Compiled Object files, Static and Dynamic libs (Shared Objects)
+*.o
+*.a
+*.so
+
+# Folders
+_obj
+_test
+
+# IntelliJ
+.idea
+
+# Architecture specific extensions/prefixes
+*.[568vq]
+[568vq].out
+
+*.cgo1.go
+*.cgo2.c
+_cgo_defun.c
+_cgo_gotypes.go
+_cgo_export.*
+
+_testmain.go
+
+*.exe
+*.test
+*.prof
+
+coverage.out
+
+/modules/options/bindata.go
+/modules/public/bindata.go
+/modules/templates/bindata.go
+
+*.db
+*.log
+
+/gitea
+
+/bin
+/dist
+/custom
+/data
+/indexers
+/log
+/public/img/avatar

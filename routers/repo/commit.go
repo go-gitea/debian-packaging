@@ -68,7 +68,6 @@ func Commits(ctx *context.Context) {
 	}
 	commits = renderIssueLinks(commits, ctx.Repo.RepoLink)
 	commits = models.ValidateCommitsWithEmails(commits)
-	commits = models.ParseCommitsWithSignature(commits)
 	ctx.Data["Commits"] = commits
 
 	ctx.Data["Username"] = ctx.Repo.Owner.Name
@@ -122,7 +121,6 @@ func SearchCommits(ctx *context.Context) {
 	}
 	commits = renderIssueLinks(commits, ctx.Repo.RepoLink)
 	commits = models.ValidateCommitsWithEmails(commits)
-	commits = models.ParseCommitsWithSignature(commits)
 	ctx.Data["Commits"] = commits
 
 	ctx.Data["Keyword"] = keyword
@@ -169,7 +167,6 @@ func FileHistory(ctx *context.Context) {
 	}
 	commits = renderIssueLinks(commits, ctx.Repo.RepoLink)
 	commits = models.ValidateCommitsWithEmails(commits)
-	commits = models.ParseCommitsWithSignature(commits)
 	ctx.Data["Commits"] = commits
 
 	ctx.Data["Username"] = ctx.Repo.Owner.Name
@@ -225,7 +222,6 @@ func Diff(ctx *context.Context) {
 	ctx.Data["IsImageFile"] = commit.IsImageFile
 	ctx.Data["Title"] = commit.Summary() + " · " + base.ShortSha(commitID)
 	ctx.Data["Commit"] = commit
-	ctx.Data["Verification"] = models.ParseCommitWithSignature(commit)
 	ctx.Data["Author"] = models.ValidateCommitWithEmail(commit)
 	ctx.Data["Diff"] = diff
 	ctx.Data["Parents"] = parents
@@ -280,7 +276,6 @@ func CompareDiff(ctx *context.Context) {
 		return
 	}
 	commits = models.ValidateCommitsWithEmails(commits)
-	commits = models.ParseCommitsWithSignature(commits)
 
 	ctx.Data["CommitRepoLink"] = ctx.Repo.RepoLink
 	ctx.Data["Commits"] = commits

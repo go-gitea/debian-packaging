@@ -360,7 +360,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
-				if IsErrIssueNotExist(err) || err == errMissingIssueNumber {
+				if IsErrIssueNotExist(err) {
 					continue
 				}
 				return err
@@ -398,7 +398,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
-				if IsErrIssueNotExist(err) || err == errMissingIssueNumber {
+				if IsErrIssueNotExist(err) {
 					continue
 				}
 				return err
@@ -438,7 +438,7 @@ func UpdateIssuesCommit(doer *User, repo *Repository, commits []*PushCommit) err
 
 			issue, err := GetIssueByRef(ref)
 			if err != nil {
-				if IsErrIssueNotExist(err) || err == errMissingIssueNumber {
+				if IsErrIssueNotExist(err) {
 					continue
 				}
 				return err

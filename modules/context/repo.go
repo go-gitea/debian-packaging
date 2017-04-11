@@ -12,6 +12,7 @@ import (
 
 	"code.gitea.io/git"
 	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/setting"
 	"github.com/Unknwon/com"
 	editorconfig "gopkg.in/editorconfig/editorconfig-core-go.v1"
@@ -26,7 +27,7 @@ type PullRequest struct {
 	HeadInfo string // [<user>:]<branch>
 }
 
-// Repository contains information to operate a repository
+// Repository contains informations to operate a repository
 type Repository struct {
 	AccessMode   models.AccessMode
 	IsWatching   bool
@@ -153,8 +154,15 @@ func RedirectToRepo(ctx *Context, redirectRepoID int64) {
 }
 
 // RepoAssignment returns a macaron to handle repository assignment
-func RepoAssignment() macaron.Handler {
+func RepoAssignment(args ...bool) macaron.Handler {
 	return func(ctx *Context) {
+		var (
+			displayBare bool // To display bare page if it is a bare repo.
+		)
+		if len(args) >= 1 {
+			displayBare = args[0]
+		}
+
 		var (
 			owner *models.User
 			err   error
@@ -211,11 +219,7 @@ func RepoAssignment() macaron.Handler {
 		if ctx.IsSigned && ctx.User.IsAdmin {
 			ctx.Repo.AccessMode = models.AccessModeOwner
 		} else {
-			var userID int64
-			if ctx.User != nil {
-				userID = ctx.User.ID
-			}
-			mode, err := models.AccessLevel(userID, repo)
+			mode, err := models.AccessLevel(ctx.User, repo)
 			if err != nil {
 				ctx.Handle(500, "AccessLevel", err)
 				return
@@ -286,7 +290,15 @@ func RepoAssignment() macaron.Handler {
 
 		// repo is bare and display enable
 		if ctx.Repo.Repository.IsBare {
-			ctx.Data["BranchName"] = ctx.Repo.Repository.DefaultBranch
+			log.Debug("Bare repository: %s", ctx.Repo.RepoLink)
+			// NOTE: to prevent templating error
+			ctx.Data["BranchName"] = ""
+			if displayBare {
+				if !ctx.Repo.IsAdmin() {
+					ctx.Flash.Info(ctx.Tr("repo.repo_is_empty"), true)
+				}
+				ctx.HTML(200, "repo/bare")
+			}
 			return
 		}
 
@@ -318,7 +330,7 @@ func RepoAssignment() macaron.Handler {
 			}
 		}
 
-		// People who have push access or have forked repository can propose a new pull request.
+		// People who have push access or have fored repository can propose a new pull request.
 		if ctx.Repo.IsWriter() || (ctx.IsSigned && ctx.User.HasForkedRepo(ctx.Repo.Repository.ID)) {
 			// Pull request is allowed if this is a fork repository
 			// and base repository accepts pull requests.

@@ -92,16 +92,6 @@ var migrations = []Migration{
 	NewMigration("use new avatar path name for security reason", useNewNameAvatars),
 	// v21 -> v22
 	NewMigration("rewrite authorized_keys file via new format", useNewPublickeyFormat),
-	// v22 -> v23
-	NewMigration("generate and migrate wiki Git hooks", generateAndMigrateWikiGitHooks),
-	// v23 -> v24
-	NewMigration("add user openid table", addUserOpenID),
-	// v24 -> v25
-	NewMigration("change the key_id and primary_key_id type", changeGPGKeysColumns),
-	// v25 -> v26
-	NewMigration("add show field in user openid table", addUserOpenIDShow),
-	// v26 -> v27
-	NewMigration("generate and migrate repo and wiki Git hooks", generateAndMigrateGitHookChains),
 }
 
 // Migrate database to current version
