@@ -189,7 +189,9 @@ Description: Painless self-hosted git service
 
 Package: golang-code.gitea-gitea-dev
 Architecture: all
-Depends: debhelper (>= 10),
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         debhelper (>= 10),
          dh-golang,
          golang-any,
          golang-barcode-dev,
