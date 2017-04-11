@@ -7,8 +7,9 @@ Files-Excluded: public/assets/font-awesome-*
                 public/css/gitgraph.css
                 public/js/draw.js
                 public/js/*.min.js
-                public/js/libs/*
-                public/plugins/*
+                public/js/libs
+                public/plugins
+                vendor
 
 Files: *
 Copyright: 2016 The Gitea Authors
