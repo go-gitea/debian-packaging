@@ -177,10 +177,6 @@ func findWikiRepoCommit(ctx *context.Context) (*git.Repository, *git.Commit, err
 		// ctx.Handle(500, "OpenRepository", err)
 		return nil, nil, err
 	}
-	if !wikiRepo.IsBranchExist("master") {
-		return wikiRepo, nil, nil
-	}
-
 	commit, err := wikiRepo.GetBranchCommit("master")
 	if err != nil {
 		ctx.Handle(500, "GetBranchCommit", err)
@@ -193,9 +189,6 @@ func renderWikiPage(ctx *context.Context, isViewPage bool) (*git.Repository, *gi
 	wikiRepo, commit, err := findWikiRepoCommit(ctx)
 	if err != nil {
 		return nil, nil
-	}
-	if commit == nil {
-		return wikiRepo, nil
 	}
 
 	// Get page list.
@@ -217,7 +210,7 @@ func renderWikiPage(ctx *context.Context, isViewPage bool) (*git.Repository, *gi
 					}
 					pages = append(pages, PageMeta{
 						Name: models.ToWikiPageName(name),
-						URL:  name,
+						URL:  models.ToWikiPageURL(name),
 					})
 				}
 			}
@@ -315,11 +308,6 @@ func Wiki(ctx *context.Context) {
 	if ctx.Written() {
 		return
 	}
-	if entry == nil {
-		ctx.Data["Title"] = ctx.Tr("repo.wiki")
-		ctx.HTML(200, tplWikiStart)
-		return
-	}
 
 	ename := entry.Name()
 	if !markdown.IsMarkdownFile(ename) {
@@ -374,7 +362,7 @@ func WikiPages(ctx *context.Context) {
 				}
 				pages = append(pages, PageMeta{
 					Name:    models.ToWikiPageName(name),
-					URL:     name,
+					URL:     models.ToWikiPageURL(name),
 					Updated: c.Author.When,
 				})
 			}
@@ -492,7 +480,7 @@ func EditWikiPost(ctx *context.Context, form auth.NewWikiForm) {
 		return
 	}
 
-	oldWikiPath := models.ToWikiPageURL(ctx.Params(":page"))
+	oldWikiPath := ctx.Params(":page")
 	newWikiPath := models.ToWikiPageURL(form.Title)
 
 	if err := ctx.Repo.Repository.EditWikiPage(ctx.User, oldWikiPath, newWikiPath, form.Content, form.Message); err != nil {
@@ -505,7 +493,7 @@ func EditWikiPost(ctx *context.Context, form auth.NewWikiForm) {
 
 // DeleteWikiPagePost delete wiki page
 func DeleteWikiPagePost(ctx *context.Context) {
-	pageURL := models.ToWikiPageURL(ctx.Params(":page"))
+	pageURL := ctx.Params(":page")
 	if len(pageURL) == 0 {
 		pageURL = "Home"
 	}

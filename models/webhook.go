@@ -475,11 +475,11 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 	// check if repo belongs to org and append additional webhooks
 	if repo.MustOwner().IsOrganization() {
 		// get hooks for org
-		orgHooks, err := GetActiveWebhooksByOrgID(repo.OwnerID)
+		orgws, err := GetActiveWebhooksByOrgID(repo.OwnerID)
 		if err != nil {
 			return fmt.Errorf("GetActiveWebhooksByOrgID: %v", err)
 		}
-		ws = append(ws, orgHooks...)
+		ws = append(ws, orgws...)
 	}
 
 	if len(ws) == 0 {

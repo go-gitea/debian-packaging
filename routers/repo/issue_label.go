@@ -9,7 +9,6 @@ import (
 	"code.gitea.io/gitea/modules/auth"
 	"code.gitea.io/gitea/modules/base"
 	"code.gitea.io/gitea/modules/context"
-	"code.gitea.io/gitea/modules/log"
 )
 
 const (
@@ -130,20 +129,18 @@ func DeleteLabel(ctx *context.Context) {
 
 // UpdateIssueLabel change issue's labels
 func UpdateIssueLabel(ctx *context.Context) {
-	issues := getActionIssues(ctx)
+	issue := getActionIssue(ctx)
 	if ctx.Written() {
 		return
 	}
 
-	switch action := ctx.Query("action"); action {
-	case "clear":
-		for _, issue := range issues {
-			if err := issue.ClearLabels(ctx.User); err != nil {
-				ctx.Handle(500, "ClearLabels", err)
-				return
-			}
+	if ctx.Query("action") == "clear" {
+		if err := issue.ClearLabels(ctx.User); err != nil {
+			ctx.Handle(500, "ClearLabels", err)
+			return
 		}
-	case "attach", "detach", "toggle":
+	} else {
+		isAttach := ctx.Query("action") == "attach"
 		label, err := models.GetLabelByID(ctx.QueryInt64("id"))
 		if err != nil {
 			if models.IsErrLabelNotExist(err) {
@@ -154,40 +151,17 @@ func UpdateIssueLabel(ctx *context.Context) {
 			return
 		}
 
-		if action == "toggle" {
-			anyHaveLabel := false
-			for _, issue := range issues {
-				if issue.HasLabel(label.ID) {
-					anyHaveLabel = true
-					break
-				}
+		if isAttach && !issue.HasLabel(label.ID) {
+			if err = issue.AddLabel(ctx.User, label); err != nil {
+				ctx.Handle(500, "AddLabel", err)
+				return
 			}
-			if anyHaveLabel {
-				action = "detach"
-			} else {
-				action = "attach"
+		} else if !isAttach && issue.HasLabel(label.ID) {
+			if err = issue.RemoveLabel(ctx.User, label); err != nil {
+				ctx.Handle(500, "RemoveLabel", err)
+				return
 			}
 		}
-
-		if action == "attach" {
-			for _, issue := range issues {
-				if err = issue.AddLabel(ctx.User, label); err != nil {
-					ctx.Handle(500, "AddLabel", err)
-					return
-				}
-			}
-		} else {
-			for _, issue := range issues {
-				if err = issue.RemoveLabel(ctx.User, label); err != nil {
-					ctx.Handle(500, "RemoveLabel", err)
-					return
-				}
-			}
-		}
-	default:
-		log.Warn("Unrecognized action: %s", action)
-		ctx.Error(500)
-		return
 	}
 
 	ctx.JSON(200, map[string]interface{}{

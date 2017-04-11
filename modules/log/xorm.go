@@ -101,7 +101,7 @@ func (l *XORMLogBridge) Infof(format string, v ...interface{}) {
 	}
 }
 
-// Warn show warning log
+// Warn show warnning log
 func (l *XORMLogBridge) Warn(v ...interface{}) {
 	if l.level <= core.LOG_WARNING {
 		msg := fmt.Sprint(v...)

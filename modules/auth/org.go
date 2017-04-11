@@ -21,7 +21,7 @@ type CreateOrgForm struct {
 	OrgName string `binding:"Required;AlphaDashDot;MaxSize(35)" locale:"org.org_name_holder"`
 }
 
-// Validate validates the fields
+// Validate valideates the fields
 func (f *CreateOrgForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -36,7 +36,7 @@ type UpdateOrgSettingForm struct {
 	MaxRepoCreation int
 }
 
-// Validate validates the fields
+// Validate valideates the fields
 func (f *UpdateOrgSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -55,7 +55,7 @@ type CreateTeamForm struct {
 	Permission  string
 }
 
-// Validate validates the fields
+// Validate valideates the fields
 func (f *CreateTeamForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }

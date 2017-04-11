@@ -84,11 +84,7 @@ func (repo *Repository) LocalWikiPath() string {
 func (repo *Repository) UpdateLocalWiki() error {
 	// Don't pass branch name here because it fails to clone and
 	// checkout to a specific branch when wiki is an empty repository.
-	var branch = ""
-	if com.IsExist(repo.LocalWikiPath()) {
-		branch = "master"
-	}
-	return UpdateLocalCopyBranch(repo.WikiPath(), repo.LocalWikiPath(), branch)
+	return UpdateLocalCopyBranch(repo.WikiPath(), repo.LocalWikiPath(), "")
 }
 
 func discardLocalWikiChanges(localPath string) error {

@@ -164,7 +164,7 @@ func Contexter() macaron.Handler {
 
 		ctx.Data["PageStartTime"] = time.Now()
 
-		// Get user from session if logged in.
+		// Get user from session if logined.
 		ctx.User, ctx.IsBasicAuth = auth.SignedInUser(ctx.Context, ctx.Session)
 
 		if ctx.User != nil {
@@ -197,7 +197,6 @@ func Contexter() macaron.Handler {
 		ctx.Data["ShowRegistrationButton"] = setting.Service.ShowRegistrationButton
 		ctx.Data["ShowFooterBranding"] = setting.ShowFooterBranding
 		ctx.Data["ShowFooterVersion"] = setting.ShowFooterVersion
-		ctx.Data["EnableOpenIDSignIn"] = setting.Service.EnableOpenIDSignIn
 
 		c.Map(ctx)
 	}

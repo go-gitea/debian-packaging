@@ -26,7 +26,6 @@
   avatar_email: user2@example.com
   num_repos: 2
   num_stars: 2
-  num_followers: 1
 
 -
   id: 3
@@ -57,7 +56,6 @@
   avatar: avatar4
   avatar_email: user4@example.com
   num_repos: 0
-  num_following: 1
 
 -
   id: 5
@@ -74,7 +72,6 @@
   num_repos: 1
   allow_create_organization: false
   is_active: true
-  num_following: 0
 
 -
   id: 6

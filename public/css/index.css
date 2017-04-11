@@ -420,14 +420,6 @@ footer .ui.language .menu {
   background: inherit !important;
   padding: 0 !important;
 }
-.ui.menu.new-menu {
-  justify-content: center !important;
-  padding-top: 15px !important;
-  margin-top: -15px !important;
-  margin-bottom: 15px !important;
-  background-color: #FAFAFA !important;
-  border-width: 1px !important;
-}
 .markdown:not(code) {
   overflow: hidden;
   font-family: "Helvetica Neue", Helvetica, "Segoe UI", Arial, freesans, sans-serif;
@@ -956,23 +948,6 @@ footer .ui.language .menu {
 #create-page-form form input,
 #create-page-form form textarea {
   width: 50%!important;
-}
-.signin .oauth2 div {
-  display: inline-block;
-}
-.signin .oauth2 div p {
-  margin: 10px 5px 0 0;
-  float: left;
-}
-.signin .oauth2 a {
-  margin-right: 5px;
-}
-.signin .oauth2 a:last-child {
-  margin-right: 0px;
-}
-.signin .oauth2 img {
-  width: 32px;
-  height: 32px;
 }
 .user.activate form,
 .user.forgot.password form,
@@ -1924,29 +1899,8 @@ footer .ui.language .menu {
   padding-left: 15px;
 }
 .repository #commits-table thead .sha {
-  text-align: center;
-  width: 140px;
-}
-.repository #commits-table td.sha .sha.label {
-  margin: 0;
-}
-.repository #commits-table td.sha .sha.label.isSigned {
-  border: 1px solid #BBB;
-}
-.repository #commits-table td.sha .sha.label.isSigned .detail.icon {
-  background: #FAFAFA;
-  margin: -6px -10px -4px 0px;
-  padding: 5px 3px 5px 6px;
-  border-left: 1px solid #BBB;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-}
-.repository #commits-table td.sha .sha.label.isSigned.isVerified {
-  border: 1px solid #21BA45;
-  background: #21BA4518;
-}
-.repository #commits-table td.sha .sha.label.isSigned.isVerified .detail.icon {
-  border-left: 1px solid #21BA4580;
+  font-size: 13px;
+  padding: 6px 40px 4px 35px;
 }
 .repository #commits-table.ui.basic.striped.table tbody tr:nth-child(2n) {
   background-color: rgba(0, 0, 0, 0.02) !important;
@@ -2260,16 +2214,6 @@ footer .ui.language .menu {
   margin-left: 26px;
   padding-top: 0;
 }
-.repository .ui.attached.isSigned.isVerified:not(.positive) {
-  border-left: 1px solid #A3C293;
-  border-right: 1px solid #A3C293;
-}
-.repository .ui.attached.isSigned.isVerified.top:not(.positive) {
-  border-top: 1px solid #A3C293;
-}
-.repository .ui.attached.isSigned.isVerified:not(.positive):last-child {
-  border-bottom: 1px solid #A3C293;
-}
 .user-cards .list {
   padding: 0;
 }
@@ -2314,9 +2258,6 @@ footer .ui.language .menu {
 #search-repo-box .results .item img,
 #search-user-box .results .item img {
   margin-right: 8px;
-}
-.issue-actions {
-  display: none;
 }
 .issue.list {
   list-style: none;
@@ -2374,35 +2315,83 @@ footer .ui.language .menu {
 .settings .content .segment {
   box-shadow: 0 1px 2px 0 rgba(34, 36, 38, 0.15);
 }
-.settings .list > .item .green {
-  color: #21BA45 !important;
-}
-.settings .list > .item:not(:first-child) {
+.settings .key.list .item:not(:first-child) {
   border-top: 1px solid #eaeaea;
-  padding: 1rem;
-  margin: 15px -1rem -1rem -1rem;
 }
-.settings .list > .item > .mega-octicon {
-  display: table-cell;
+.settings .key.list .ssh-key-state-indicator {
+  float: left;
+  color: gray;
+  padding-left: 10px;
+  padding-top: 10px;
 }
-.settings .list > .item > .mega-octicon + .content {
-  display: table-cell;
-  padding: 0 0 0 .5em;
-  vertical-align: top;
+.settings .key.list .ssh-key-state-indicator.active {
+  color: #6cc644;
 }
-.settings .list > .item .info {
-  margin-top: 10px;
-}
-.settings .list > .item .info .tab.segment {
-  border: none;
-  padding: 10px 0 0;
-}
-.settings .list.key .meta {
+.settings .key.list .meta {
   padding-top: 5px;
+}
+.settings .key.list .print {
+  color: #767676;
+}
+.settings .key.list .activity {
   color: #666;
 }
-.settings .list.email > .item:not(:first-child) {
-  min-height: 60px;
+.settings .hook.list > .item:not(:first-child) {
+  border-top: 1px solid #eaeaea;
+}
+.settings .hook.list .item {
+  padding: 10px 20px;
+}
+.settings .hook.list .item .octicon,
+.settings .hook.list .item .fa {
+  width: 20px;
+  text-align: center;
+}
+.settings .hook.list .item a {
+  /* These are technically the same, but use both */
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  -ms-word-break: break-all;
+  /* This is the dangerous one in WebKit, as it breaks things wherever */
+  word-break: break-all;
+  /* Instead use this non-standard one: */
+  word-break: break-word;
+  /* Adds a hyphen where the word breaks, if supported (No Blink) */
+  -ms-hyphens: auto;
+  -moz-hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphens: auto;
+}
+.settings .hook.history.list .item {
+  padding-left: 13px;
+}
+.settings .hook.history.list .item .meta .ui.right {
+  margin-top: 5px;
+}
+.settings .hook.history.list .item .meta .ui.right .time {
+  font-size: 12px;
+}
+.settings .hook.history.list .item .info {
+  margin-top: 10px;
+}
+.settings .hook.history.list .item .info .tabular.menu .item {
+  font-weight: 500;
+}
+.settings .hook.history.list .item .info .tab.segment {
+  border: none;
+  padding: 0;
+  padding-top: 10px;
+  box-shadow: none;
+}
+.settings .hook.history.list .item .info .tab.segment > * {
+  color: #666;
+}
+.settings .hook.history.list .item .info .tab.segment pre {
+  word-wrap: break-word;
+}
+.settings .hook.history.list .item .info .tab.segment pre .hljs {
+  padding: 0;
+  background-color: inherit;
 }
 .ui.vertical.menu .header.item {
   font-size: 1.1em;
@@ -2546,17 +2535,6 @@ footer .ui.language .menu {
 .CodeMirror .cm-comment {
   background: inherit !important;
 }
-.repository.file.editor .tab[data-tab="write"] {
-  padding: 0 !important;
-}
-.repository.file.editor .tab[data-tab="write"] .editor-toolbar {
-  border: none !important;
-}
-.repository.file.editor .tab[data-tab="write"] .CodeMirror {
-  border-left: none;
-  border-right: none;
-  border-bottom: none;
-}
 .organization {
   padding-top: 15px;
   padding-bottom: 80px;
@@ -2690,6 +2668,16 @@ footer .ui.language .menu {
   padding-top: 15px;
   padding-bottom: 80px;
 }
+.user.settings .list .item.ui.grid {
+  margin-top: 15px;
+}
+.user.settings .email.list .item:not(:first-child) {
+  border-top: 1px solid #eaeaea;
+  height: 50px;
+}
+.user.settings .email.list .item:not(:first-child) .button {
+  margin-top: -10px;
+}
 .user.profile .ui.card .username {
   display: block;
 }
@@ -2753,10 +2741,6 @@ footer .ui.language .menu {
 }
 .user.notification .octicon.blue {
   color: #2185d0;
-}
-.user.link-account:not(.icon) {
-  padding-top: 15px;
-  padding-bottom: 5px;
 }
 .dashboard {
   padding-top: 15px;
@@ -2946,14 +2930,6 @@ footer .ui.language .menu {
   padding-top: 15px;
   padding-bottom: 80px;
 }
-.explore .navbar {
-  justify-content: center;
-  padding-top: 15px !important;
-  margin-top: -15px !important;
-  margin-bottom: 15px !important;
-  background-color: #FAFAFA !important;
-  border-width: 1px !important;
-}
 .explore .navbar .octicon {
   width: 16px;
   text-align: center;
@@ -3006,4 +2982,25 @@ footer .ui.language .menu {
 }
 .ui.user.list .item .description a:hover {
   text-decoration: underline;
+}
+.user.link-account:not(.icon) {
+  padding-top: 15px;
+  padding-bottom: 5px;
+}
+.signin .oauth2 div {
+  display: inline-block;
+}
+.signin .oauth2 div p {
+  margin: 10px 5px 0 0;
+  float: left;
+}
+.signin .oauth2 a {
+  margin-right: 5px;
+}
+.signin .oauth2 a:last-child {
+  margin-right: 0px;
+}
+.signin .oauth2 img {
+  width: 32px;
+  height: 32px;
 }

@@ -1,7 +1,6 @@
 pom.xml
 pom.xml.asc
-*.jar
-*.class
+*jar
 /lib/
 /classes/
 /target/
