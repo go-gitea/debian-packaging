@@ -1,0 +1,23 @@
+Debian maintains a versioned name of this package.
+--- a/cmd/serv.go
++++ b/cmd/serv.go
+@@ -18,7 +18,7 @@
+ 	"code.gitea.io/gitea/modules/log"
+ 	"code.gitea.io/gitea/modules/setting"
+ 	"github.com/Unknwon/com"
+-	"github.com/dgrijalva/jwt-go"
++	"github.com/dgrijalva/jwt-go-v3"
+ 	"github.com/urfave/cli"
+ )
+ 
+--- a/modules/lfs/server.go
++++ b/modules/lfs/server.go
+@@ -15,7 +15,7 @@
+ 	"code.gitea.io/gitea/modules/context"
+ 	"code.gitea.io/gitea/modules/log"
+ 	"code.gitea.io/gitea/modules/setting"
+-	"github.com/dgrijalva/jwt-go"
++	"github.com/dgrijalva/jwt-go-v3"
+ 	"gopkg.in/macaron.v1"
+ )
+ 
