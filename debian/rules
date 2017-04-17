@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 export GO_LDFLAGS = -extldflags=-Wl,-z,relro,-z,now
 
-# PIE builds (-buildmode=pie) need a pkgdir specified
+# PIE builds (-buildmode=pie) need -pkgdir (abs path ref)
 GOPATH ?= $(CURDIR)/obj-$(DEB_TARGET_GNU_TYPE)
 export GOPATH
 
