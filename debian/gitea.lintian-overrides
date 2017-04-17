@@ -2,7 +2,10 @@
 gitea: hardening-no-fortify-functions usr/bin/gitea
 
 # Unknwon is a nickname for Jiahua Chen.
-# TODO: Correctly detected spelling errors:
-#   allready already
-#   conain contain
-gitea: spelling-error-in-binary
+gitea: spelling-error-in-binary usr/bin/gitea unknwon unknown
+
+# This spelling error comes from a build dependency.
+gitea: spelling-error-in-binary usr/bin/gitea conain contain
+
+# writeN is used in a code sample
+gitea: spelling-error-in-binary usr/bin/gitea writeN written
