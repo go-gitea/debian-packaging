@@ -1,10 +1,12 @@
 #!/usr/bin/make -f
-DEB_BUILD_HARDENING_FORTIFY = 1
-GO_LDFLAGS += -extldflags=-Wl,-z,now,-z,relro
-
-PACKAGES ?= $(addprefix code.gitea.io/gitea/,$(filter-out integrations,$(shell go list ./... | grep -v vendor/ | sed -n 's/^.*gitea\///p')))
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export GO_LDFLAGS = -extldflags=-Wl,-z,now,-z,relro
 GOPATH ?= $(CURDIR)/obj-$(DEB_TARGET_GNU_TYPE)
 export GOPATH
+
+# This removes vendor/* and integrations/ without removing integrations/*/
+# It re-creates dh-golang logic with these exceptions.
+PACKAGES ?= $(addprefix code.gitea.io/gitea/,$(filter-out integrations,$(shell go list ./... | grep -v vendor/ | sed -n 's/^.*gitea\///p')))
 
 %:
 	dh $@ --buildsystem=golang --with=golang
@@ -12,8 +14,8 @@ export GOPATH
 override_dh_auto_build:
 	go install -v -p 4 \
 		-buildmode=pie \
-		-pkgdir=$(GOPATH) \
-		-ldflags '-s -w $(GO_LDFLAGS)' \
+		-pkgdir="$(GOPATH)" \
+		-ldflags="$(GO_LDFLAGS)" \
 		code.gitea.io/gitea $(PACKAGES)
 
 # Tests are broken by the debian build environment
