@@ -1,3 +1,6 @@
+# Gitea has dependencies on core go packages that import unsafe.
+gitea: hardening-no-fortify-functions usr/bin/gitea
+
 # Unknwon is a nickname for Jiahua Chen.
 # TODO: Correctly detected spelling errors:
 #   allready already
