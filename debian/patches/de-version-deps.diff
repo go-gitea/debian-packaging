@@ -1,0 +1,111 @@
+Upstream gitea relies on path names for keeping track of
+dependency versions. In Debian, we have have d/control.
+I plan to work with upstream on this patch.
+--- a/templates/base/footer.tmpl
++++ b/templates/base/footer.tmpl
+@@ -27,14 +27,14 @@
+ 			</div>
+ 		</div>
+ 	</footer>
+-	<script src="{{AppSubUrl}}/js/jquery-1.11.3.min.js"></script>
++	<script src="{{AppSubUrl}}/js/jquery.min.js"></script>
+ 	<script src="{{AppSubUrl}}/js/libs/jquery.are-you-sure.js"></script>
+ {{if .RequireSimpleMDE}}
+-	<script src="{{AppSubUrl}}/plugins/simplemde-1.10.1/simplemde.min.js"></script>
+-	<script src="{{AppSubUrl}}/plugins/codemirror-5.17.0/addon/mode/loadmode.js"></script>
+-	<script src="{{AppSubUrl}}/plugins/codemirror-5.17.0/mode/meta.js"></script>
++	<script src="{{AppSubUrl}}/plugins/simplemde/simplemde.min.js"></script>
++	<script src="{{AppSubUrl}}/plugins/codemirror/addon/mode/loadmode.js"></script>
++	<script src="{{AppSubUrl}}/plugins/codemirror/mode/meta.js"></script>
+ 	<script>
+-		CodeMirror.modeURL =  "{{AppSubUrl}}/plugins/codemirror-5.17.0/mode/%N/%N.js";
++		CodeMirror.modeURL =  "{{AppSubUrl}}/plugins/codemirror/mode/%N/%N.js";
+ 	</script>
+ {{end}}
+ {{if .RequireGitGraph}}
+@@ -44,24 +44,24 @@
+ {{end}}
+ 
+ <!-- JavaScript -->
+-<script src="{{AppSubUrl}}/js/semantic-2.2.1.min.js"></script>
++<script src="{{AppSubUrl}}/js/semantic.min.js"></script>
+ <script src="{{AppSubUrl}}/js/index.js?v={{MD5 AppVer}}"></script>
+ 
+ <!-- Third-party libraries -->
+ {{if .RequireHighlightJS}}
+-	<script src="{{AppSubUrl}}/plugins/highlight-9.6.0/highlight.pack.js"></script>
++	<script src="{{AppSubUrl}}/plugins/highlight/highlight.pack.js"></script>
+ {{end}}
+ {{if .RequireMinicolors}}
+-	<script src="{{AppSubUrl}}/plugins/jquery.minicolors-2.2.3/jquery.minicolors.min.js"></script>
++	<script src="{{AppSubUrl}}/plugins/jquery.minicolors/jquery.minicolors.min.js"></script>
+ {{end}}
+ {{if .RequireDatetimepicker}}
+-	<script src="{{AppSubUrl}}/plugins/jquery.datetimepicker-2.4.5/jquery.datetimepicker.js"></script>
++	<script src="{{AppSubUrl}}/plugins/jquery.datetimepicker/jquery.datetimepicker.js"></script>
+ {{end}}
+ {{if .RequireDropzone}}
+-	<script src="{{AppSubUrl}}/plugins/dropzone-4.2.0/dropzone.js"></script>
++	<script src="{{AppSubUrl}}/plugins/dropzone/dropzone.js"></script>
+ {{end}}
+ 	<script src="{{AppSubUrl}}/js/libs/autolink.js"></script>
+-	<script src="{{AppSubUrl}}/js/libs/emojify-1.1.0.min.js"></script>
+-	<script src="{{AppSubUrl}}/js/libs/clipboard-1.5.9.min.js"></script>
++	<script src="{{AppSubUrl}}/js/libs/emojify.min.js"></script>
++	<script src="{{AppSubUrl}}/js/libs/clipboard.min.js"></script>
+ </body>
+ </html>
+--- a/templates/base/head.tmpl
++++ b/templates/base/head.tmpl
+@@ -17,11 +17,11 @@
+ {{end}}
+ 
+ 	<link rel="shortcut icon" href="{{AppSubUrl}}/img/favicon.png" />
+-	<link rel="stylesheet" href="{{AppSubUrl}}/assets/font-awesome-4.6.3/css/font-awesome.min.css">
+-	<link rel="stylesheet" href="{{AppSubUrl}}/assets/octicons-4.3.0/octicons.min.css">
++	<link rel="stylesheet" href="{{AppSubUrl}}/assets/font-awesome/css/font-awesome.min.css">
++	<link rel="stylesheet" href="{{AppSubUrl}}/assets/octicons/octicons.min.css">
+ 
+ {{if .RequireSimpleMDE}}
+-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/simplemde-1.10.1/simplemde.min.css">
++	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/simplemde/simplemde.min.css">
+ {{end}}
+ 
+ {{if .RequireGitGraph}}
+@@ -30,20 +30,20 @@
+ {{end}}
+ 
+ 	<!-- Stylesheet -->
+-	<link rel="stylesheet" href="{{AppSubUrl}}/css/semantic-2.2.1.min.css">
++	<link rel="stylesheet" href="{{AppSubUrl}}/css/semantic.min.css">
+ 	<link rel="stylesheet" href="{{AppSubUrl}}/css/index.css?v={{MD5 AppVer}}">
+ 
+ {{if .RequireHighlightJS}}
+-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/highlight-9.6.0/github.css">
++	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/highlight/github.css">
+ {{end}}
+ {{if .RequireMinicolors}}
+-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/jquery.minicolors-2.2.3/jquery.minicolors.css">
++	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/jquery.minicolors/jquery.minicolors.css">
+ {{end}}
+ {{if .RequireDatetimepicker}}
+-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/jquery.datetimepicker-2.4.5/jquery.datetimepicker.css">
++	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/jquery.datetimepicker/jquery.datetimepicker.css">
+ {{end}}
+ {{if .RequireDropzone}}
+-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/dropzone-4.2.0/dropzone.css">
++	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/dropzone/dropzone.css">
+ {{end}}
+ 	<style class="list-search-style"></style>
+ 
+--- a/templates/repo/view_file.tmpl
++++ b/templates/repo/view_file.tmpl
+@@ -48,7 +48,7 @@
+ 							<strong>{{.i18n.Tr "repo.video_not_supported_in_browser"}}</strong>
+ 						</video>
+ 					{{else if .IsPDFFile}}
+-						<iframe width="100%" height="600px" src="{{AppSubUrl}}/plugins/pdfjs-1.4.20/web/viewer.html?file={{EscapePound $.RawFileLink}}"></iframe>
++						<iframe width="100%" height="600px" src="{{AppSubUrl}}/plugins/pdfjs/web/viewer.html?file={{EscapePound $.RawFileLink}}"></iframe>
+ 					{{else}}
+ 						<a href="{{EscapePound $.RawFileLink}}" rel="nofollow" class="btn btn-gray btn-radius">{{.i18n.Tr "repo.file_view_raw"}}</a>
+ 					{{end}}
