@@ -3,3 +3,5 @@ var/lib/gitea/custom/conf
 var/lib/gitea/data
 var/lib/gitea/repositories
 var/log/gitea
+usr/share/gitea
+usr/share/gitea/public

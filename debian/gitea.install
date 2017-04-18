@@ -1,2 +1,3 @@
 conf/app.ini etc/gitea/app.ini
+public usr/share/gitea/public
 usr/bin/gitea
