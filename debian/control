@@ -125,7 +125,14 @@ Build-Depends: debhelper (>= 10),
                golang-goprotobuf-dev,
                golang-gopkg-yaml.v2-dev,
                golang-strk.kbt-projects-go-libravatar-dev,
-               golang-github-ugorji-go-codec-dev
+               golang-github-ugorji-go-codec-dev,
+               fonts-octicons,
+               libjs-codemirror,
+               libjs-highlight.js,
+               libjs-jquery,
+               node-semver,
+               ruby-dropzonejs-rails,
+               ruby-font-awesome-rails
 Standards-Version: 3.9.8
 Homepage: https://github.com/go-gitea/gitea
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/gitea.git
@@ -317,13 +324,10 @@ Depends: ${shlibs:Depends},
          fonts-octicons,
          libjs-codemirror,
          libjs-highlight.js,
-         libjs-pdfjs,
          libjs-jquery,
-         libjs-jquery-minicolors,
          node-semver,
          ruby-dropzonejs-rails,
-         ruby-font-awesome-rails,
-         ruby-rails-autolink
+         ruby-font-awesome-rails
 Description: Painless self-hosted git service -- source
  Gitea is a self-hosted git service aiming to provide a full suite of
  features similar to Gitlab or Github. It aims to be light weight,
