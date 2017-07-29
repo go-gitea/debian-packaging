@@ -1,0 +1,65 @@
+Description: Update app.ini with debianized defaults.
+ This patch updates the default app.ini, provided by upstream, with some
+ debianized defaults; useful for running from the packaged version.
+Author: Michael Lustfield <michael@lustfield.net>
+Forwarded: not-needed
+--- a/conf/app.ini
++++ b/conf/app.ini
+@@ -3,10 +3,10 @@
+ ; Change it if you run locally
+ RUN_USER = git
+ ; Either "dev", "prod" or "test", default is "dev"
+-RUN_MODE = dev
++RUN_MODE = prod
+ 
+ [repository]
+-ROOT =
++ROOT = /var/lib/gitea/repositories
+ SCRIPT_TYPE = bash
+ ; Default ANSI charset
+ ANSI_CHARSET =
+@@ -131,7 +131,7 @@
+ KEY_FILE = custom/https/key.pem
+ ; Upper level of template and static file path
+ ; default is the path where Gitea is executed
+-STATIC_ROOT_PATH =
++STATIC_ROOT_PATH = /var/lib/gitea
+ ; Default path for App data
+ APP_DATA_PATH = data
+ ; Application level GZIP support
+@@ -148,7 +148,7 @@
+ 
+ [database]
+ ; Either "mysql", "postgres" or "sqlite3", it's your choice
+-DB_TYPE = mysql
++DB_TYPE = sqlite3
+ HOST = 127.0.0.1:3306
+ NAME = gitea
+ USER = root
+@@ -310,14 +310,14 @@
+ FORMAT =
+ 
+ [log]
+-ROOT_PATH =
++ROOT_PATH = /var/log/gitea
+ ; Either "console", "file", "conn", "smtp" or "database", default is "console"
+ ; Use comma to separate multiple modes, e.g. "console, file"
+-MODE = console
++MODE = file
+ ; Buffer length of channel, keep it as it is if you don't know what it is.
+ BUFFER_LEN = 10000
+ ; Either "Trace", "Debug", "Info", "Warn", "Error", "Critical", default is "Trace"
+-LEVEL = Trace
++LEVEL = Warn
+ 
+ ; For "console" mode only
+ [log.console]
+@@ -325,7 +325,7 @@
+ 
+ ; For "file" mode only
+ [log.file]
+-LEVEL =
++LEVEL = Warn
+ ; This enables automated log rotate(switch of following options), default is true
+ LOG_ROTATE = true
+ ; Max line number of single file, default is 1000000

@@ -22,7 +22,7 @@ PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
 WORKINGDIR=/var/lib/gitea
 DAEMON=/usr/bin/gitea
-DAEMON_ARGS="web --config=/usr/bin/custom/conf/app.ini"
+DAEMON_ARGS="web --config=/var/lib/gitea/custom/conf/app.ini"
 USER=gitea
 USERBIND="setcap cap_net_bind_service=+ep"
 STOP_SCHEDULE="${STOP_SCHEDULE:-QUIT/5/TERM/1/KILL/5}"
