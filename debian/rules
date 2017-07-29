@@ -12,7 +12,7 @@ PACKAGES ?= $(addprefix code.gitea.io/gitea/,$(filter-out integrations,$(shell g
 %:
 	dh $@ --buildsystem=golang --with=golang
 
-override_dh_auto_build: gen_public
+override_dh_auto_build:
 	go install -v -p 4 \
 		-buildmode=pie \
 		-pkgdir="$(GOPATH)" \
@@ -21,37 +21,3 @@ override_dh_auto_build: gen_public
 
 # Tests are broken by the debian build environment
 override_dh_auto_test:
-
-# Rebuild dfsg-removals
-gen_public:
-	mkdir -p public/assets/font-awesome/fonts
-	cp -R         /usr/share/ruby-font-awesome-rails/app/assets/fonts				public/assets/font-awesome/fonts
-	install -D -T /usr/share/ruby-font-awesome-rails/app/assets/stylesheets/font-awesome.css.erb	public/assets/font-awesome/font-awesome.min.css
-	install -D -T /usr/share/fonts/truetype/octicons/octicons.ttf					public/assets/octicons/octicons.ttf
-	install -D -T /usr/share/javascript/jquery/jquery.min.js					public/js/jquery.min.js
-	mkdir -p public/plugins/codemirror/mode public/plugins/codemirror/addon/mode
-	cp -R         /usr/share/javascript/codemirror/mode						public/plugins/codemirror/mode
-	cp -R         /usr/share/javascript/codemirror/addon/mode					public/plugins/codemirror/addon/mode
-	install -D -T /usr/share/ruby-dropzonejs-rails/app/assets/javascripts/dropzone.js		public/plugins/dropzone/dropzone.js
-	install -D -T /usr/share/ruby-dropzonejs-rails/app/assets/stylesheets/dropzone/dropzone.scss	public/plugins/dropzone/dropzone.css
-	install -D -T /usr/share/javascript/highlight.js/highlight.min.js				public/plugins/highlight/highlight.pack.js
-	install -D -T /usr/share/javascript/highlight.js/styles/github.css				public/plugins/highlight/github.css
-	install -D -T /usr/share/javascript/highlight.js/styles/default.css				public/plugins/highlight/default.css
-	# Not currently available
-	#install -D MISSING usr/share/gitea/public/css/gitgraph.css
-	#install -D MISSING usr/share/gitea/public/css/github.min.css
-	#install -D MISSING usr/share/gitea/public/css/semanti.min.css
-	#install -D MISSING usr/share/gitea/public/img/emoji/
-	#install -D MISSING usr/share/gitea/public/js/libs/clipboard-1.5.9.min.js
-	#install -D MISSING usr/share/gitea/public/js/libs/emojify-1.1.0.min.js
-	#install -D MISSING usr/share/gitea/public/js/libs/gitgraph.js
-	#install -D MISSING usr/share/gitea/public/js/libs/jquery.are-you-sure.js
-	#install -D MISSING usr/share/gitea/public/js/semantic-2.2.1.min.js
-	#install -D MISSING usr/share/gitea/public/plugins/jquery.datetimepicker
-	#install -D MISSING usr/share/gitea/public/plugins/pdfjs
-	#install -D MISSING usr/share/gitea/public/plugins/simplemde
-	# In stable only...
-	#install -D /usr/share/javascript/jquery-minicolors/jquery.miniColors.min.js usr/share/gitea/public/plugins/jquery.minicolors/
-	#install -D /usr/share/javascript/jquery-minicolors/jquery.miniColors.css /usr/share/gitea/public/plugins/jquery.minicolors/jquery.minicolors.min.js
-	#install -D /usr/share/javascript/jquery-minicolorsimages/colors.png /usr/share/gitea/public/plugins/jquery.minicolors/jquery.minicolors.png
-	#install -D MISSING usr/share/gitea/public/js/libs/autolink.js
