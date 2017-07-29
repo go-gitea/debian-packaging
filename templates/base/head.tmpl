@@ -17,11 +17,11 @@
 {{end}}
 
 	<link rel="shortcut icon" href="{{AppSubUrl}}/img/favicon.png" />
-	<link rel="stylesheet" href="{{AppSubUrl}}/assets/font-awesome-4.6.3/css/font-awesome.min.css">
-	<link rel="stylesheet" href="{{AppSubUrl}}/assets/octicons-4.3.0/octicons.min.css">
+	<link rel="stylesheet" href="{{AppSubUrl}}/assets/font-awesome/css/font-awesome.min.css">
+	<link rel="stylesheet" href="{{AppSubUrl}}/assets/octicons/octicons.min.css">
 
 {{if .RequireSimpleMDE}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/simplemde-1.10.1/simplemde.min.css">
+	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/simplemde/simplemde.min.css">
 {{end}}
 
 {{if .RequireGitGraph}}
@@ -30,20 +30,20 @@
 {{end}}
 
 	<!-- Stylesheet -->
-	<link rel="stylesheet" href="{{AppSubUrl}}/css/semantic-2.2.1.min.css">
+	<link rel="stylesheet" href="{{AppSubUrl}}/css/semantic.min.css">
 	<link rel="stylesheet" href="{{AppSubUrl}}/css/index.css?v={{MD5 AppVer}}">
 
 {{if .RequireHighlightJS}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/highlight-9.6.0/github.css">
+	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/highlight/github.css">
 {{end}}
 {{if .RequireMinicolors}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/jquery.minicolors-2.2.3/jquery.minicolors.css">
+	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/jquery.minicolors/jquery.minicolors.css">
 {{end}}
 {{if .RequireDatetimepicker}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/jquery.datetimepicker-2.4.5/jquery.datetimepicker.css">
+	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/jquery.datetimepicker/jquery.datetimepicker.css">
 {{end}}
 {{if .RequireDropzone}}
-	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/dropzone-4.2.0/dropzone.css">
+	<link rel="stylesheet" href="{{AppSubUrl}}/plugins/dropzone/dropzone.css">
 {{end}}
 	<style class="list-search-style"></style>
 

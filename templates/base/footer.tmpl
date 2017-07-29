@@ -27,14 +27,14 @@
 			</div>
 		</div>
 	</footer>
-	<script src="{{AppSubUrl}}/js/jquery-1.11.3.min.js"></script>
+	<script src="{{AppSubUrl}}/js/jquery.min.js"></script>
 	<script src="{{AppSubUrl}}/js/libs/jquery.are-you-sure.js"></script>
 {{if .RequireSimpleMDE}}
-	<script src="{{AppSubUrl}}/plugins/simplemde-1.10.1/simplemde.min.js"></script>
-	<script src="{{AppSubUrl}}/plugins/codemirror-5.17.0/addon/mode/loadmode.js"></script>
-	<script src="{{AppSubUrl}}/plugins/codemirror-5.17.0/mode/meta.js"></script>
+	<script src="{{AppSubUrl}}/plugins/simplemde/simplemde.min.js"></script>
+	<script src="{{AppSubUrl}}/plugins/codemirror/addon/mode/loadmode.js"></script>
+	<script src="{{AppSubUrl}}/plugins/codemirror/mode/meta.js"></script>
 	<script>
-		CodeMirror.modeURL =  "{{AppSubUrl}}/plugins/codemirror-5.17.0/mode/%N/%N.js";
+		CodeMirror.modeURL =  "{{AppSubUrl}}/plugins/codemirror/mode/%N/%N.js";
 	</script>
 {{end}}
 {{if .RequireGitGraph}}
@@ -44,24 +44,24 @@
 {{end}}
 
 <!-- JavaScript -->
-<script src="{{AppSubUrl}}/js/semantic-2.2.1.min.js"></script>
+<script src="{{AppSubUrl}}/js/semantic.min.js"></script>
 <script src="{{AppSubUrl}}/js/index.js?v={{MD5 AppVer}}"></script>
 
 <!-- Third-party libraries -->
 {{if .RequireHighlightJS}}
-	<script src="{{AppSubUrl}}/plugins/highlight-9.6.0/highlight.pack.js"></script>
+	<script src="{{AppSubUrl}}/plugins/highlight/highlight.pack.js"></script>
 {{end}}
 {{if .RequireMinicolors}}
-	<script src="{{AppSubUrl}}/plugins/jquery.minicolors-2.2.3/jquery.minicolors.min.js"></script>
+	<script src="{{AppSubUrl}}/plugins/jquery.minicolors/jquery.minicolors.min.js"></script>
 {{end}}
 {{if .RequireDatetimepicker}}
-	<script src="{{AppSubUrl}}/plugins/jquery.datetimepicker-2.4.5/jquery.datetimepicker.js"></script>
+	<script src="{{AppSubUrl}}/plugins/jquery.datetimepicker/jquery.datetimepicker.js"></script>
 {{end}}
 {{if .RequireDropzone}}
-	<script src="{{AppSubUrl}}/plugins/dropzone-4.2.0/dropzone.js"></script>
+	<script src="{{AppSubUrl}}/plugins/dropzone/dropzone.js"></script>
 {{end}}
 	<script src="{{AppSubUrl}}/js/libs/autolink.js"></script>
-	<script src="{{AppSubUrl}}/js/libs/emojify-1.1.0.min.js"></script>
-	<script src="{{AppSubUrl}}/js/libs/clipboard-1.5.9.min.js"></script>
+	<script src="{{AppSubUrl}}/js/libs/emojify.min.js"></script>
+	<script src="{{AppSubUrl}}/js/libs/clipboard.min.js"></script>
 </body>
 </html>
