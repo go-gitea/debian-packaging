@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/setting"
 
 	"github.com/go-xorm/xorm"
@@ -33,6 +34,7 @@ func useNewNameAvatars(x *xorm.Engine) error {
 	}
 
 	type User struct {
+		ID              int64 `xorm:"pk autoincr"`
 		Avatar          string
 		UseCustomAvatar bool
 	}
@@ -40,7 +42,8 @@ func useNewNameAvatars(x *xorm.Engine) error {
 	for _, name := range names {
 		userID, err := strconv.ParseInt(name, 10, 64)
 		if err != nil {
-			return err
+			log.Warn("ignore avatar %s rename: %v", name, err)
+			continue
 		}
 
 		var user User
