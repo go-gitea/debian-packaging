@@ -15,7 +15,7 @@ import (
 	"code.gitea.io/gitea/modules/context"
 	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/setting"
-	"github.com/dgrijalva/jwt-go-v3"
+	"github.com/dgrijalva/jwt-go"
 	"gopkg.in/macaron.v1"
 )
 
