@@ -21,13 +21,29 @@ case "$1" in
                     chown gitea:adm "$logdir/$file"
                 fi
             done
-            # Create a config symlink if one does not exist
-            if [ -f '/etc/gitea/app.ini' ] && [ -d '/var/lib/gitea/custom/conf' ] &&
-               [ ! -e '/var/lib/gitea/custom/conf/app.ini' ]; then
-                ln -s /etc/gitea/app.ini /var/lib/gitea/custom/conf/app.ini
-            fi
         fi
-        [ -d '/var/lib/gitea' ] && chown -R gitea:gitea /var/lib/gitea
+
+        # Create a config symlink if one does not exist
+        if [ -f '/etc/gitea/app.ini' ] && [ -d '/var/lib/gitea/custom/conf' ] &&
+           [ ! -e '/var/lib/gitea/custom/conf/app.ini' ]; then
+            ln -s /etc/gitea/app.ini /var/lib/gitea/custom/conf/app.ini
+        fi
+
+	# Create other symlinks
+        if [ -d '/usr/share/gitea/conf' ] && [ ! -e '/var/lib/gitea/conf' ]; then
+            ln -s '/usr/share/gitea/conf' '/var/lib/gitea/'
+        fi
+        if [ -d '/usr/share/gitea/public' ] && [ ! -e '/var/lib/gitea/public' ]; then
+            ln -s '/usr/share/gitea/public' '/var/lib/gitea/'
+        fi
+        if [ -d '/usr/share/gitea/templates' ] && [ ! -e '/var/lib/gitea/templates' ]; then
+            ln -s '/usr/share/gitea/templates' '/var/lib/gitea/'
+        fi
+
+	# Make sure gitea can access files
+        if [ -d '/var/lib/gitea' ]; then
+            chown gitea:gitea /var/lib/gitea
+            chown gitea:gitea /var/lib/gitea/*
         ;;
 
   abort-upgrade|abort-remove|abort-deconfigure)

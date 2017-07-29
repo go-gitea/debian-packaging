@@ -1,5 +1,5 @@
 conf/app.ini etc/gitea
 public usr/share/gitea
 usr/bin/gitea
-options/locale var/lib/gitea/conf
-templates var/lib/gitea
+options/locale usr/share/gitea/conf
+templates usr/share/gitea
