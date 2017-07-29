@@ -144,6 +144,7 @@ Architecture: any
 Built-Using: ${misc:Built-Using}
 Depends: ${shlibs:Depends},
          ${misc:Depends},
+         libcap2-bin,
          adduser,
          git
 Description: Painless self-hosted git service
