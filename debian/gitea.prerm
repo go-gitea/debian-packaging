@@ -1,0 +1,24 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    remove|remove-in-favour|deconfigure|deconfigure-in-favour)
+        if [ -x /etc/init.d/gitea ]; then
+            invoke-rc.d gitea stop || exit $?
+        fi
+        [ -L /var/lib/gitea/conf ] && rm /var/lib/gitea/conf
+        [ -L /var/lib/gitea/custom ] && rm /var/lib/gitea/custom
+        ;;
+
+    upgrade|failed-upgrade)
+        ;;
+
+    *)
+        echo "prerm called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

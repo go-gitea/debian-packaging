@@ -31,9 +31,15 @@ case "$1" in
             ln -s /etc/gitea /var/lib/gitea/custom
         fi
 
-        # This doesn't use STATIC_ROOT_PATH ; bug?
+        # This doesn't seem to use STATIC_ROOT_PATH ; bug?
         if [ -d '/usr/share/gitea/conf' ] && [ ! -e '/var/lib/gitea/conf' ]; then
             ln -s '/usr/share/gitea/conf' '/var/lib/gitea/'
+        fi
+        if [ -d '/usr/share/gitea/public' ] && [ ! -e '/var/lib/gitea/public' ]; then
+            ln -s '/usr/share/gitea/public' '/var/lib/gitea/'
+        fi
+        if [ -d '/usr/share/gitea/templates' ] && [ ! -e '/var/lib/gitea/templates' ]; then
+            ln -s '/usr/share/gitea/templates' '/var/lib/gitea/'
         fi
 
         # Make sure gitea can access files
