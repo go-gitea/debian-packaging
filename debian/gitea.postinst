@@ -26,8 +26,8 @@ case "$1" in
         fi
 
         # Create a config symlink if one does not exist
-        if [ -f /etc/gitea/conf/app.ini ] && [ -d /var/lib/gitea/custom/conf ] &&
-           [ ! -e /var/lib/gitea/custom/conf/app.ini ]; then
+        if [ -f /etc/gitea/conf/app.ini ] && [ ! -e /var/lib/gitea/custom/conf/app.ini ] &&
+           [ ! -e /var/lib/gitea/custom ]; then
             ln -s /etc/gitea /var/lib/gitea/custom
         fi
 
