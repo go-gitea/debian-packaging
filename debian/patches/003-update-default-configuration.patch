@@ -5,7 +5,7 @@ Author: Michael Lustfield <michael@lustfield.net>
 Forwarded: not-needed
 --- a/conf/app.ini
 +++ b/conf/app.ini
-@@ -3,10 +3,10 @@
+@@ -3,11 +3,11 @@
  ; Change it if you run locally
  RUN_USER = git
  ; Either "dev", "prod" or "test", default is "dev"
@@ -14,10 +14,12 @@ Forwarded: not-needed
  
  [repository]
 -ROOT =
+-SCRIPT_TYPE = bash
 +ROOT = /var/lib/gitea/repositories
- SCRIPT_TYPE = bash
++SCRIPT_TYPE = sh
  ; Default ANSI charset
  ANSI_CHARSET =
+ ; Force every new repository to be private
 @@ -131,7 +131,7 @@
  KEY_FILE = custom/https/key.pem
  ; Upper level of template and static file path
@@ -36,7 +38,7 @@ Forwarded: not-needed
  HOST = 127.0.0.1:3306
  NAME = gitea
  USER = root
-@@ -310,14 +310,14 @@
+@@ -310,22 +310,22 @@
  FORMAT =
  
  [log]
@@ -50,16 +52,17 @@ Forwarded: not-needed
  BUFFER_LEN = 10000
  ; Either "Trace", "Debug", "Info", "Warn", "Error", "Critical", default is "Trace"
 -LEVEL = Trace
-+LEVEL = Warn
++LEVEL = Info
  
  ; For "console" mode only
  [log.console]
-@@ -325,7 +325,7 @@
+-LEVEL =
++LEVEL = Critical
  
  ; For "file" mode only
  [log.file]
 -LEVEL =
-+LEVEL = Warn
++LEVEL = Info
  ; This enables automated log rotate(switch of following options), default is true
  LOG_ROTATE = true
  ; Max line number of single file, default is 1000000
