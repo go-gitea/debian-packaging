@@ -8,7 +8,6 @@ Init needs to capture stdout/stderr and write to file
 New golang-code.gitea-git-dev dependency requires downgrade
   Will require a clunky version number
 Need to configure better logging options in default config
-Doesn't seem to be building with sqlite3 support
 
 v1.1.2 impacted by console logging bug:
   https://github.com/go-gitea/gitea/pull/602

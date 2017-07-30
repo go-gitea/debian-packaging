@@ -5,9 +5,12 @@ Author: Michael Lustfield <michael@lustfield.net>
 Forwarded: not-needed
 --- a/conf/app.ini
 +++ b/conf/app.ini
-@@ -3,11 +3,11 @@
+@@ -1,13 +1,13 @@
+ ; App name that shows on every page title
+ APP_NAME = Gitea: Git with a cup of tea
  ; Change it if you run locally
- RUN_USER = git
+-RUN_USER = git
++RUN_USER = gitea
  ; Either "dev", "prod" or "test", default is "dev"
 -RUN_MODE = dev
 +RUN_MODE = prod
