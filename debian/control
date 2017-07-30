@@ -199,7 +199,6 @@ Package: golang-code.gitea-gitea-dev
 Architecture: all
 Depends: ${shlibs:Depends},
          ${misc:Depends},
-         debhelper (>= 10),
          dh-golang,
          golang-any,
          golang-barcode-dev,

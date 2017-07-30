@@ -1,4 +1,4 @@
-conf/app.ini etc/gitea
+conf/app.ini etc/gitea/conf
 public usr/share/gitea
 usr/bin/gitea
 options/locale usr/share/gitea/conf

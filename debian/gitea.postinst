@@ -6,12 +6,14 @@ case "$1" in
         # Create service user for gitea
         addgroup --system --quiet gitea
         adduser --system --quiet --ingroup gitea --no-create-home --home /var/lib/gitea gitea
-        # Allow local admin to override
+
         logdir="/var/log/gitea"
+        # Make sure log directory has correct permissions set
         if ! dpkg-statoverride --list "$logdir" >/dev/null; then
             chown root:adm $logdir
             chmod 0755 $logdir
         fi
+
         if [ -z "$2" ]; then
             # Logrotate maintains these permissions
             for file in error.log gitea.log http.log xorm.log; do
@@ -24,26 +26,21 @@ case "$1" in
         fi
 
         # Create a config symlink if one does not exist
-        if [ -f '/etc/gitea/app.ini' ] && [ -d '/var/lib/gitea/custom/conf' ] &&
+        if [ -f '/etc/gitea/conf/app.ini' ] && [ -d '/var/lib/gitea/custom/conf' ] &&
            [ ! -e '/var/lib/gitea/custom/conf/app.ini' ]; then
-            ln -s /etc/gitea/app.ini /var/lib/gitea/custom/conf/app.ini
+            ln -s /etc/gitea /var/lib/gitea/custom
         fi
 
-	# Create other symlinks
+        # This doesn't use STATIC_ROOT_PATH ; bug?
         if [ -d '/usr/share/gitea/conf' ] && [ ! -e '/var/lib/gitea/conf' ]; then
             ln -s '/usr/share/gitea/conf' '/var/lib/gitea/'
         fi
-        if [ -d '/usr/share/gitea/public' ] && [ ! -e '/var/lib/gitea/public' ]; then
-            ln -s '/usr/share/gitea/public' '/var/lib/gitea/'
-        fi
-        if [ -d '/usr/share/gitea/templates' ] && [ ! -e '/var/lib/gitea/templates' ]; then
-            ln -s '/usr/share/gitea/templates' '/var/lib/gitea/'
-        fi
 
-	# Make sure gitea can access files
+        # Make sure gitea can access files
         if [ -d '/var/lib/gitea' ]; then
             chown gitea:gitea /var/lib/gitea
             chown gitea:gitea /var/lib/gitea/*
+        fi
         ;;
 
   abort-upgrade|abort-remove|abort-deconfigure)

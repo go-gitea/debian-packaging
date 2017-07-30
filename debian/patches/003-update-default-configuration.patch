@@ -25,7 +25,7 @@ Forwarded: not-needed
  ; Upper level of template and static file path
  ; default is the path where Gitea is executed
 -STATIC_ROOT_PATH =
-+STATIC_ROOT_PATH = /var/lib/gitea
++STATIC_ROOT_PATH = /usr/share/gitea
  ; Default path for App data
  APP_DATA_PATH = data
  ; Application level GZIP support

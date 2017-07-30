@@ -1,5 +1,4 @@
 etc/gitea
-var/lib/gitea/custom/conf
 var/lib/gitea/data
 var/lib/gitea/repositories
 var/log/gitea
