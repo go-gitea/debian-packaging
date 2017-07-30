@@ -6,8 +6,12 @@ case "$1" in
         if [ -x /etc/init.d/gitea ]; then
             invoke-rc.d gitea stop || exit $?
         fi
-        [ -L /var/lib/gitea/conf ] && rm /var/lib/gitea/conf
-        [ -L /var/lib/gitea/custom ] && rm /var/lib/gitea/custom
+        for dir in /var/lib/gitea/conf
+                   /var/lib/gitea/custom
+                   /var/lib/gitea/public
+                   /var/lib/gitea/templates; do
+            [ -L /var/lib/gitea/conf ] && rm /var/lib/gitea/conf
+        done
         ;;
 
     upgrade|failed-upgrade)
