@@ -9,6 +9,8 @@ case "$1" in
         for dir in /var/lib/gitea/conf /var/lib/gitea/custom /var/lib/gitea/public /var/lib/gitea/templates; do
             [ -L "$dir" ] && rm "$dir"
         done
+	# SSH configuration is build from a database, no need to keep it.
+	rm -rf /var/lib/gitea/.ssh
         ;;
 
     upgrade|failed-upgrade)
