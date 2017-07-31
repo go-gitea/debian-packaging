@@ -53,7 +53,7 @@ Forwarded: not-needed
  ; Auto-login remember days
  LOGIN_REMEMBER_DAYS = 7
  COOKIE_USERNAME = gitea_awesome
-@@ -310,22 +310,22 @@
+@@ -310,24 +310,24 @@
  FORMAT =
  
  [log]
@@ -67,7 +67,7 @@ Forwarded: not-needed
  BUFFER_LEN = 10000
  ; Either "Trace", "Debug", "Info", "Warn", "Error", "Critical", default is "Trace"
 -LEVEL = Trace
-+LEVEL = Info
++LEVEL = Warn
  
  ; For "console" mode only
  [log.console]
@@ -77,7 +77,10 @@ Forwarded: not-needed
  ; For "file" mode only
  [log.file]
 -LEVEL =
-+LEVEL = Info
++LEVEL = Warn
  ; This enables automated log rotate(switch of following options), default is true
- LOG_ROTATE = true
+-LOG_ROTATE = true
++LOG_ROTATE = false
  ; Max line number of single file, default is 1000000
+ MAX_LINES = 1000000
+ ; Max size shift of single file, default is 28 means 1 << 28, 256MB
