@@ -143,11 +143,14 @@ XS-Go-Import-Path: code.gitea.io/gitea
 Package: gitea
 Architecture: any
 Built-Using: ${misc:Built-Using}
+Pre-Depends: debconf
 Depends: adduser,
-         libcap2-bin,
+         gitea-common (= ${source:Version}),
          git,
+         libcap2-bin,
          ${misc:Depends},
          ${shlibs:Depends}
+Provides: gogs
 Description: Painless self-hosted git service
  Gitea is a self-hosted git service aiming to provide a full suite of
  features similar to Gitlab or Github. It aims to be light weight,
@@ -195,6 +198,18 @@ Description: Painless self-hosted git service
    * Per-project settings
  .
  Documentation: https://docs.gitea.io/en-US/
+
+Package: gitea-common
+Architecture: all
+Multi-Arch: foreign
+Built-Using: ${misc:Built-Using}
+Depends: lsb-base (>= 3.0-6), ${misc:Depends}
+Description: Painless self-hosted git service - common files
+ Gitea is a self-hosted git service aiming to provide a full suite of
+ features similar to Gitlab or Github. It aims to be light weight,
+ feature rich, and easily maintained.
+ .
+ This package contains base configuration files used by all architectures.
 
 Package: golang-code.gitea-gitea-dev
 Architecture: all

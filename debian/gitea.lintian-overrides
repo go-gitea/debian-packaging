@@ -19,7 +19,3 @@ gitea: spelling-error-in-binary usr/bin/gitea commited committed
 gitea: spelling-error-in-binary usr/bin/gitea Destory Destroy
 gitea: spelling-error-in-binary usr/bin/gitea ot to
 gitea: package-contains-empty-directory
-gitea: executable-not-elf-or-script
-gitea: embedded-javascript-library
-gitea: font-in-non-font-package
-gitea: duplicate-font-file

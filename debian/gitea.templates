@@ -1,5 +1,5 @@
 Template: gitea/secret-key
 Type: password
-Description: Global secret key for gitea
+_Description: Global secret key for gitea:
  This is the global secret key used for server security. After initial
  configuration, this value will be removed from the debconf database.

@@ -1,0 +1,3 @@
+options/locale usr/share/gitea/conf
+public usr/share/gitea
+templates usr/share/gitea
