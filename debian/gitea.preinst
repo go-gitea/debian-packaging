@@ -1,0 +1,38 @@
+#!/bin/sh
+set -e
+
+. /usr/share/debconf/confmodule
+
+case "$1" in
+    install)
+        # Create gitea group
+        if ! getent group gitea >/dev/null; then
+            addgroup --system --quiet gitea
+        fi
+
+        # Create gitea user
+        if ! getent passwd gitea >/dev/null; then
+            adduser --quiet \
+                    --system \
+                    --disabled-login \
+                    --no-create-home \
+                    --shell /bin/false \
+                    --ingroup gitea \
+                    --home /var/lib/gitea \
+                    --gecos "Gitea Daemon" \
+                    gitea
+        fi
+        ;;
+
+    upgrade|abort-upgrade)
+        ;;
+
+    *)
+        echo "preinst called with unknown argument \`$1'" >&2
+        exit 1
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

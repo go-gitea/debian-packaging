@@ -1,19 +1,16 @@
 #!/bin/sh
 set -e
 
+. /usr/share/debconf/confmodule
+
 case "$1" in
     configure)
-        # Create service user for gitea
-        addgroup --system --quiet gitea
-        adduser --system --quiet --ingroup gitea --no-create-home --home /var/lib/gitea gitea
-
         logdir='/var/log/gitea'
         # Make sure log directory has correct permissions set
-        if ! dpkg-statoverride --list "$logdir" >/dev/null; then
-            chown root:adm "$logdir"
-            chmod 0755 "$logdir"
-        fi
+        dpkg-statoverride --list "$logdir" >/dev/null || \
+            dpkg-statoverride --add --force --update gitea adm 0750 "$logdir"
 
+        # If this is a fresh install
         if [ -z "$2" ]; then
             # Logrotate maintains these permissions
             for file in error.log gitea.log http.log xorm.log; do
@@ -32,7 +29,7 @@ case "$1" in
         fi
 
         # This doesn't seem to use STATIC_ROOT_PATH ; bug?
-	for dir in /usr/share/gitea/conf /usr/share/gitea/public /usr/share/gitea/templates; do
+        for dir in /usr/share/gitea/conf /usr/share/gitea/public /usr/share/gitea/templates; do
             if [ -d "$dir" ] && [ ! -e "/var/lib/gitea/${dir##*/}" ]; then
                 ln -s "$dir" /var/lib/gitea/
             fi
@@ -42,6 +39,16 @@ case "$1" in
         if [ -d /var/lib/gitea ]; then
             chown gitea:gitea /var/lib/gitea
             chown gitea:gitea /var/lib/gitea/*
+        fi
+
+        # Set a unique secret key if one hasn't been provided
+        if grep -q 'Xx-secret-key-xX' /etc/gitea/conf/app.ini; then
+            db_get gitea/secret-key || true
+            _SK=$(echo "$RET" | sed -e 's/[]\/$*.^|[]/\\&/g')
+	    [ -n "$_SK" ] || _SK=$(date +%s%Z%N | sha256sum | base64 | head -c 14)
+            sed -i "s/Xx-secret-key-xX/$_SK/" /etc/gitea/conf/app.ini
+            db_clear gitea/secret-key || true
+            db_go
         fi
         ;;
 
