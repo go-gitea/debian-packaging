@@ -1,4 +1,23 @@
 # libjs-highlight.js
-#/usr/share/javascript/highlight.js/highlight.min.js	/usr/share/gitea/public/vendor/plugins/highlight/highlight.pack.js
-#/usr/share/javascript/highlight.js/styles/default.css	/usr/share/gitea/public/vendor/plugins/highlight/default.css
-#/usr/share/javascript/highlight.js/styles/github.css	/usr/share/gitea/public/vendor/plugins/highlight/github.css
+usr/share/javascript/highlight.js/highlight.min.js
+		usr/share/gitea/public/vendor/plugins/highlight/highlight.pack.js
+usr/share/javascript/highlight.js/styles/default.css
+		usr/share/gitea/public/vendor/plugins/highlight/default.css
+usr/share/javascript/highlight.js/styles/github.css
+		usr/share/gitea/public/vendor/plugins/highlight/github.css
+# libjs-codemirror
+usr/share/javascript/codemirror/addon/mode
+		usr/share/gitea/public/vendor/plugins/codemirror/addon/mode
+usr/share/javascript/codemirror/mode
+		usr/share/gitea/public/vendor/plugins/codemirror/mode
+# libjs-jquery
+usr/share/javascript/jquery/jquery.min.js
+		usr/share/gitea/public/vendor/jquery/jquery.min.js
+# libjs-clipboard
+usr/share/javascript/clipboard/clipboard.js
+		usr/share/gitea/public/vendor/clipboard/clipboard.min.js
+# libjs-jquery-timepicker
+usr/share/javascript/jquery-timepicker/jquery-ui-timepicker-addon.css
+		usr/share/gitea/public/vendor/jquery.datetimepicker/jquery.datetimepicker.css
+usr/share/javascript/jquery-timepicker/jquery-ui-timepicker-addon.js
+		usr/share/gitea/public/vendor/jquery.datetimepicker/jquery.datetimepicker.js

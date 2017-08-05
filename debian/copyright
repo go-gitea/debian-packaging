@@ -1,20 +1,9 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: gitea
 Source: https://github.com/go-gitea/gitea
-Files-Excluded: public/assets/font*
-                public/assets/octicon*
-                public/css/themes/github/*
-                public/css/*.min.css
-                public/css/gitgraph.css
-                public/img/emoji/*
-                public/img/openid-16x16.png
-                public/img/slack.png
-                public/js/libs/*
-                public/js/*.min.js
-                public/plugins/*
-                vendor/*
-Comment: Excluded files (less *png) are works covered under a free license.
-         These works are re-included at build time from Build-Depends.
+Files-Excluded: public/css/themes/github
+                public/vendor
+                vendor
 
 Files: *
 Copyright: 2016 The Gitea Authors
