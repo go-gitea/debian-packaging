@@ -127,13 +127,7 @@ Build-Depends: debhelper (>= 10),
                golang-gopkg-yaml.v2-dev,
                golang-goprotobuf-dev,
                golang-strk.kbt-projects-go-libravatar-dev,
-               libjs-codemirror,
-               libjs-highlight.js,
-               libjs-jquery,
-               libpam0g-dev,
-               node-semver,
-               ruby-dropzonejs-rails,
-               ruby-font-awesome-rails
+               libpam0g-dev
 Standards-Version: 4.0.0
 Homepage: https://github.com/go-gitea/gitea
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/gitea.git
@@ -204,7 +198,11 @@ Architecture: all
 Multi-Arch: foreign
 Built-Using: ${misc:Built-Using}
 Depends: lsb-base (>= 3.0-6),
+         libjs-clipboard,
+         libjs-codemirror,
          libjs-highlight.js,
+         libjs-jquery,
+         octicons,
          ${misc:Depends}
 Description: Painless self-hosted git service - common files
  Gitea is a self-hosted git service aiming to provide a full suite of
@@ -339,13 +337,7 @@ Depends: debhelper (>= 10),
          golang-gopkg-yaml.v2-dev,
          golang-goprotobuf-dev,
          golang-strk.kbt-projects-go-libravatar-dev,
-         libjs-codemirror,
-         libjs-highlight.js,
-         libjs-jquery,
          libpam0g-dev,
-         node-semver,
-         ruby-dropzonejs-rails,
-         ruby-font-awesome-rails,
          ${shlibs:Depends},
          ${misc:Depends},
 Description: Painless self-hosted git service -- source

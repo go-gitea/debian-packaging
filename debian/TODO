@@ -1,16 +1,10 @@
-Init script is poorly written and adds an extra install dependency
-Working directory is /usr/bin instead of /var/lib/gitea
-  Templates are not found
-  Most default paths are wrong
-  Current hack includes --config in the init script
-Not tested with systemD
-Init needs to capture stdout/stderr and write to file
-New golang-code.gitea-git-dev dependency requires downgrade
-  Will require a clunky version number
-Need to configure better logging options in default config
-
-v1.1.2 impacted by console logging bug:
-  https://github.com/go-gitea/gitea/pull/602
-
-Need to remove public/vendor/, whenever it exists:
-  https://github.com/go-gitea/gitea/issues/1484
+- Pending upstream PR:
+  + https://github.com/go-gitea/gitea/issues/1484
+- Package remaining javascript libraries
+- Need to rewrite/improve d/gitea.init
+- Working directory is /usr/bin instead of /var/lib/gitea
+  + Templates are not found
+  + Most default paths are wrong
+  + Current hack includes --config in the init script
+- Not tested with systemD
+- Init needs to capture stdout/stderr and write to file
