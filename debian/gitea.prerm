@@ -3,13 +3,17 @@ set -e
 
 case "$1" in
     remove|remove-in-favour|deconfigure|deconfigure-in-favour)
+        # Terminate the gitea service
         if [ -x /etc/init.d/gitea ]; then
             invoke-rc.d gitea stop || exit $?
         fi
+
+        # Destroy manually created links
         for dir in /var/lib/gitea/conf /var/lib/gitea/custom /var/lib/gitea/public /var/lib/gitea/templates; do
             [ -L "$dir" ] && rm "$dir"
         done
-	# SSH configuration is build from a database, no need to keep it.
+
+	# SSH configuration is built from a database, no need to keep it.
 	rm -rf /var/lib/gitea/.ssh
         ;;
 

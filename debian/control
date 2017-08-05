@@ -145,8 +145,8 @@ Architecture: any
 Built-Using: ${misc:Built-Using}
 Pre-Depends: debconf
 Depends: adduser,
-         gitea-common (= ${source:Version}),
          git,
+         gitea-common (= ${source:Version}),
          libcap2-bin,
          ${misc:Depends},
          ${shlibs:Depends}
@@ -203,7 +203,9 @@ Package: gitea-common
 Architecture: all
 Multi-Arch: foreign
 Built-Using: ${misc:Built-Using}
-Depends: lsb-base (>= 3.0-6), ${misc:Depends}
+Depends: lsb-base (>= 3.0-6),
+         libjs-highlight.js,
+         ${misc:Depends}
 Description: Painless self-hosted git service - common files
  Gitea is a self-hosted git service aiming to provide a full suite of
  features similar to Gitlab or Github. It aims to be light weight,

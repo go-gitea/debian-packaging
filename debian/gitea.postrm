@@ -3,8 +3,8 @@ set -e
 
 case "$1" in
     purge)
-        deluser --system --quiet gitea || true
         rm -rf /var/log/gitea /etc/gitea
+        dpkg-statoverride --remove --force --quiet /var/log/gitea
         ;;
 
     upgrade|remove|failed-upgrade|abort-install|abort-upgrade|disappear)

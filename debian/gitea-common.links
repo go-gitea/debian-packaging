@@ -1,0 +1,4 @@
+# libjs-highlight.js
+#/usr/share/javascript/highlight.js/highlight.min.js	/usr/share/gitea/public/vendor/plugins/highlight/highlight.pack.js
+#/usr/share/javascript/highlight.js/styles/default.css	/usr/share/gitea/public/vendor/plugins/highlight/default.css
+#/usr/share/javascript/highlight.js/styles/github.css	/usr/share/gitea/public/vendor/plugins/highlight/github.css

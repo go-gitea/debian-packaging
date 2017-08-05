@@ -5,18 +5,40 @@ set -e
 
 case "$1" in
     configure)
-        # This doesn't seem to use STATIC_ROOT_PATH ; bug?
-        for dir in /usr/share/gitea/conf /usr/share/gitea/public /usr/share/gitea/templates; do
-            if [ -d "$dir" ] && [ ! -e "/var/lib/gitea/${dir##*/}" ]; then
-                ln -s "$dir" /var/lib/gitea/
+        # Create gitea user and group
+        if ! getent group gitea >/dev/null; then
+            addgroup --system --quiet gitea
+        fi
+        if ! getent passwd gitea >/dev/null; then
+            adduser --quiet \
+                    --system \
+                    --disabled-login \
+                    --no-create-home \
+                    --shell /bin/false \
+                    --ingroup gitea \
+                    --home /var/lib/gitea \
+                    --gecos "Gitea Daemon" \
+                    gitea
+        fi
+
+        # Make sure log directory has correct permissions set
+        dpkg-statoverride --list "/var/log/gitea" >/dev/null || \
+            dpkg-statoverride --add --force --quiet --update gitea adm 0750 /var/log/gitea
+
+        # If this is a fresh install
+        if [ -z "$2" ]; then
+            # Make sure gitea can access files
+            if [ -d /var/lib/gitea ]; then
+                chown gitea:gitea /var/lib/gitea
+                chown gitea:gitea /var/lib/gitea/*
             fi
-        done
+        fi
 
         # Set a unique secret key if one hasn't been provided
         if grep -q 'Xx-secret-key-xX' /etc/gitea/conf/app.ini; then
             db_get gitea/secret-key || true
             _SK=$(echo "$RET" | sed -e 's/[]\/$*.^|[]/\\&/g')
-	    [ -n "$_SK" ] || _SK=$(date +%s%Z%N | sha256sum | base64 | head -c 14)
+            [ -n "$_SK" ] || _SK=$(date +%s%Z%N | sha256sum | base64 | head -c 14)
             sed -i "s/Xx-secret-key-xX/$_SK/" /etc/gitea/conf/app.ini
             db_clear gitea/secret-key || true
             db_go
