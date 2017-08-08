@@ -200,6 +200,7 @@ Built-Using: ${misc:Built-Using}
 Depends: lsb-base (>= 3.0-6),
          libjs-clipboard,
          libjs-codemirror,
+         libjs-emojify,
          libjs-highlight.js,
          libjs-jquery,
          octicons,

@@ -51,7 +51,10 @@ usr/share/fonts/web-fonts/octicons
 #TODO
 
 # libjs-emojify
-#TODO
+usr/share/javascript/emojify.js/emojify.min.js
+		usr/share/gitea/public/vendor/plugins/emojify/emojify.min.js
+usr/share/javascript/emojify.js/images/emoji
+		usr/share/gitea/public/vendor/plugins/emojify/images
 
 # libjs-gitgraph
 #TODO
