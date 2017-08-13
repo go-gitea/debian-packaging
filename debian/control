@@ -203,7 +203,9 @@ Depends: lsb-base (>= 3.0-6),
          libjs-emojify,
          libjs-highlight.js,
          libjs-jquery,
+         libjs-pdf,
          octicons,
+         pdf.js-common,
          ${misc:Depends}
 Description: Painless self-hosted git service - common files
  Gitea is a self-hosted git service aiming to provide a full suite of

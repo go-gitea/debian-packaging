@@ -62,8 +62,14 @@ usr/share/javascript/emojify.js/images/emoji
 # libjs-jquery-areyousure
 #TODO
 
-# libjs-pdfjs
-#TODO
+# libjs-pdf / pdf.js-common
+usr/share/javascript/pdf/build/pdf.js
+		usr/share/gitea/public/vendor/plugins/pdfjs/pdf.js
+usr/share/javascript/pdf/build/pdf.worker.js
+		usr/share/gitea/public/vendor/plugins/pdfjs/pdf.worker.js
+
+usr/share/javascript/pdf/web
+		usr/share/gitea/public/vendor/plugins/pdfjs/web
 
 # libjs-simplemde
 #TODO
