@@ -139,6 +139,7 @@ Architecture: any
 Built-Using: ${misc:Built-Using}
 Pre-Depends: debconf
 Depends: adduser,
+         bash,
          git,
          gitea-common (= ${source:Version}),
          libcap2-bin,
@@ -204,6 +205,7 @@ Depends: lsb-base (>= 3.0-6),
          libjs-highlight.js,
          libjs-jquery,
          libjs-pdf,
+         libjs-simplemde,
          octicons,
          pdf.js-common,
          ${misc:Depends}

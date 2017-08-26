@@ -67,7 +67,10 @@ usr/share/javascript/pdf
 		usr/share/gitea/public/vendor/plugins/pdfjs
 
 # libjs-simplemde
-#TODO
+usr/share/javascript/simplemde/css/simplemde.css
+		usr/share/gitea/public/vendor/plugins/simplemde/simplemde.min.css
+usr/share/javascript/simplemde/js/simplemde.js
+		usr/share/gitea/public/vendor/plugins/simplemde/simplemde.min.js
 
 # libjs-vue
 #TODO
