@@ -199,11 +199,15 @@ Architecture: all
 Multi-Arch: foreign
 Built-Using: ${misc:Built-Using}
 Depends: lsb-base (>= 3.0-6),
+         libjs-cssrelpreload,
          libjs-clipboard,
          libjs-codemirror,
          libjs-emojify,
          libjs-highlight.js,
          libjs-jquery,
+         libjs-jquery-areyousure,
+         libjs-jquery-gitgraph,
+         libjs-jquery-minicolor,
          libjs-pdf,
          libjs-simplemde,
          octicons,

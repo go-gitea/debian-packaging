@@ -45,10 +45,16 @@ usr/share/fonts/web-fonts/octicons
 #TODO
 
 # libjs-jquery-minicolor
-#TODO
+usr/share/javascript/jquery-minicolors
+		usr/share/gitea/public/vendor/jquery.minicolors
 
 # libjs-cssrelpreload
-#TODO
+usr/share/javascript/cssrelpreload/cssrelpreload.js
+		usr/share/gitea/public/vendor/cssrelpreload/cssrelpreload.min.js
+usr/share/javascript/cssrelpreload/loadCSS.js
+		usr/share/gitea/public/vendor/cssrelpreload/loadCSS.min.js
+usr/share/javascript/cssrelpreload/onloadCSS.js
+		usr/share/gitea/public/vendor/cssrelpreload/onloadCSS.min.js
 
 # libjs-emojify
 usr/share/javascript/emojify.js/emojify.min.js
@@ -57,10 +63,14 @@ usr/share/javascript/emojify.js/images/emoji
 		usr/share/gitea/public/vendor/plugins/emojify/images
 
 # libjs-gitgraph
-#TODO
+usr/share/javascript/jquery-gitgraph/gitgraph.min.js
+		usr/share/gitea/public/vendor/plugins/gitgraph/gitgraph.js
+usr/share/javascript/jquery-gitgraph/gitgraph.css
+		usr/share/gitea/public/vendor/plugins/gitgraph/gitgraph.css
 
 # libjs-jquery-areyousure
-#TODO
+usr/share/javascript/jquery-areyousure/jquery.are-you-sure.min.js
+		usr/share/gitea/public/vendor/plugins/jquery.areyousure/jquery.are-you-sure.js
 
 # libjs-pdf / pdf.js-common
 usr/share/javascript/pdf
