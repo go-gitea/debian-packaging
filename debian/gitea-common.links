@@ -1,3 +1,24 @@
+##
+# Assets / Fonts
+##
+
+# octicons
+usr/share/fonts/web-fonts/octicons
+		usr/share/gitea/public/vendor/assets/octicons
+usr/share/fonts/web-fonts/octicons
+		usr/share/gitea/public/css/themes/github/assets/fonts
+
+# fonts-font-awesome
+usr/share/fonts-font-awesome
+		usr/share/gitea/public/vendor/assets/font-awesome
+
+# libjs-swaggerui
+#TODO
+
+##
+# 3rd Party Plugins
+##
+
 # libjs-highlight.js
 usr/share/javascript/highlight.js/highlight.min.js
 		usr/share/gitea/public/vendor/plugins/highlight/highlight.pack.js
@@ -26,16 +47,7 @@ usr/share/javascript/jquery-timepicker/jquery-ui-timepicker-addon.css
 usr/share/javascript/jquery-timepicker/jquery-ui-timepicker-addon.js
 		usr/share/gitea/public/vendor/plugins/jquery.datetimepicker/jquery.datetimepicker.js
 
-# octicons
-usr/share/fonts/web-fonts/octicons
-		usr/share/gitea/public/vendor/assets/octicons
-usr/share/fonts/web-fonts/octicons
-		usr/share/gitea/public/css/themes/github/assets/fonts
-
 # libjs-dropzone
-#TODO
-
-# libjs-fontawesome
 #TODO
 
 # libjs-autolink
@@ -83,7 +95,4 @@ usr/share/javascript/simplemde/js/simplemde.js
 		usr/share/gitea/public/vendor/plugins/simplemde/simplemde.min.js
 
 # libjs-vue
-#TODO
-
-# libjs-swaggerui
 #TODO
