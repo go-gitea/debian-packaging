@@ -13,7 +13,9 @@ usr/share/fonts-font-awesome
 		usr/share/gitea/public/vendor/assets/font-awesome
 
 # libjs-swaggerui
-#TODO
+usr/share/javascript/libs-swaggerui
+		usr/share/gitea/public/vendor/assets/swagger-ui
+
 
 ##
 # 3rd Party Plugins
@@ -48,13 +50,22 @@ usr/share/javascript/jquery-timepicker/jquery-ui-timepicker-addon.js
 		usr/share/gitea/public/vendor/plugins/jquery.datetimepicker/jquery.datetimepicker.js
 
 # libjs-dropzone
-#TODO
+usr/share/javascript/libjs-dropzone/dropzone.min.js
+		usr/share/gitea/public/vendor/dropzone/dropzone.js
+usr/share/javascript/libjs-dropzone/dropzone.css
+		usr/share/gitea/public/vendor/dropzone/dropzone.css
 
 # libjs-autolink
-#TODO
+usr/share/javascript/libjs-autolink/autolink-min.js
+		usr/share/gitea/public/vendor/autolink/autolink.js
 
 # libjs-semantic
-#TODO
+usr/share/javascript/libjs-semanticui/semantic.css
+		usr/share/gitea/public/vendor/semantic/semantic.min.css
+usr/share/javascript/libjs-semanticui/semantic.js
+		usr/share/gitea/public/vendor/semantic/semantic.min.js
+usr/share/javascript/libjs-semanticui/themes
+		usr/share/gitea/public/vendor/semantic/themes
 
 # libjs-jquery-minicolor
 usr/share/javascript/jquery-minicolors
@@ -95,4 +106,5 @@ usr/share/javascript/simplemde/js/simplemde.js
 		usr/share/gitea/public/vendor/plugins/simplemde/simplemde.min.js
 
 # libjs-vue
-#TODO
+usr/share/javascript/libjs-vue/vue.min.js
+		usr/share/gitea/public/vendor/plugins/vue/vue.min.js
