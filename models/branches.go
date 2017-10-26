@@ -17,10 +17,10 @@ const (
 
 // ProtectedBranch struct
 type ProtectedBranch struct {
-	ID          int64  `xorm:"pk autoincr"`
-	RepoID      int64  `xorm:"UNIQUE(s)"`
-	BranchName  string `xorm:"UNIQUE(s)"`
-	CanPush     bool
+	ID          int64     `xorm:"pk autoincr"`
+	RepoID      int64     `xorm:"UNIQUE(s)"`
+	BranchName  string    `xorm:"UNIQUE(s)"`
+	CanPush     bool      `xorm:"NOT NULL DEFAULT false"`
 	Created     time.Time `xorm:"-"`
 	CreatedUnix int64
 	Updated     time.Time `xorm:"-"`
@@ -36,6 +36,11 @@ func (protectBranch *ProtectedBranch) BeforeInsert() {
 // BeforeUpdate before protected branch update time
 func (protectBranch *ProtectedBranch) BeforeUpdate() {
 	protectBranch.UpdatedUnix = time.Now().Unix()
+}
+
+// IsProtected returns if the branch is protected
+func (protectBranch *ProtectedBranch) IsProtected() bool {
+	return protectBranch.ID > 0
 }
 
 // GetProtectedBranchByRepoID getting protected branch by repo ID
@@ -57,10 +62,27 @@ func GetProtectedBranchBy(repoID int64, BranchName string) (*ProtectedBranch, er
 	return rel, nil
 }
 
-// GetProtectedBranches get all protected btanches
+// GetProtectedBranches get all protected branches
 func (repo *Repository) GetProtectedBranches() ([]*ProtectedBranch, error) {
 	protectedBranches := make([]*ProtectedBranch, 0)
 	return protectedBranches, x.Find(&protectedBranches, &ProtectedBranch{RepoID: repo.ID})
+}
+
+// IsProtectedBranch checks if branch is protected
+func (repo *Repository) IsProtectedBranch(branchName string) (bool, error) {
+	protectedBranch := &ProtectedBranch{
+		RepoID:     repo.ID,
+		BranchName: branchName,
+	}
+
+	has, err := x.Get(protectedBranch)
+	if err != nil {
+		return true, err
+	} else if has {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // AddProtectedBranch add protection to branch
@@ -78,7 +100,7 @@ func (repo *Repository) AddProtectedBranch(branchName string, canPush bool) erro
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -109,7 +131,7 @@ func (repo *Repository) ChangeProtectedBranch(id int64, canPush bool) error {
 	ProtectedBranch.CanPush = canPush
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -129,7 +151,7 @@ func (repo *Repository) DeleteProtectedBranch(id int64) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}

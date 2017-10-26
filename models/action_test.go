@@ -1,6 +1,7 @@
 package models
 
 import (
+	"path"
 	"strings"
 	"testing"
 
@@ -10,22 +11,21 @@ import (
 )
 
 func TestAction_GetRepoPath(t *testing.T) {
-	action := &Action{
-		RepoUserName: "username",
-		RepoName:     "reponame",
-	}
-	assert.Equal(t, "username/reponame", action.GetRepoPath())
+	assert.NoError(t, PrepareTestDatabase())
+	repo := AssertExistsAndLoadBean(t, &Repository{}).(*Repository)
+	owner := AssertExistsAndLoadBean(t, &User{ID: repo.OwnerID}).(*User)
+	action := &Action{RepoID: repo.ID}
+	assert.Equal(t, path.Join(owner.Name, repo.Name), action.GetRepoPath())
 }
 
 func TestAction_GetRepoLink(t *testing.T) {
-	action := &Action{
-		RepoUserName: "username",
-		RepoName:     "reponame",
-	}
+	assert.NoError(t, PrepareTestDatabase())
+	repo := AssertExistsAndLoadBean(t, &Repository{}).(*Repository)
+	owner := AssertExistsAndLoadBean(t, &User{ID: repo.OwnerID}).(*User)
+	action := &Action{RepoID: repo.ID}
 	setting.AppSubURL = "/suburl/"
-	assert.Equal(t, "/suburl/username/reponame", action.GetRepoLink())
-	setting.AppSubURL = ""
-	assert.Equal(t, "/username/reponame", action.GetRepoLink())
+	expected := path.Join(setting.AppSubURL, owner.Name, repo.Name)
+	assert.Equal(t, expected, action.GetRepoLink())
 }
 
 func TestNewRepoAction(t *testing.T) {
@@ -36,13 +36,12 @@ func TestNewRepoAction(t *testing.T) {
 	repo.Owner = user
 
 	actionBean := &Action{
-		OpType:       ActionCreateRepo,
-		ActUserID:    user.ID,
-		RepoID:       repo.ID,
-		ActUserName:  user.Name,
-		RepoName:     repo.Name,
-		RepoUserName: repo.Owner.Name,
-		IsPrivate:    repo.IsPrivate,
+		OpType:    ActionCreateRepo,
+		ActUserID: user.ID,
+		RepoID:    repo.ID,
+		ActUser:   user,
+		Repo:      repo,
+		IsPrivate: repo.IsPrivate,
 	}
 
 	AssertNotExistsBean(t, actionBean)
@@ -64,14 +63,13 @@ func TestRenameRepoAction(t *testing.T) {
 	repo.LowerName = strings.ToLower(newRepoName)
 
 	actionBean := &Action{
-		OpType:       ActionRenameRepo,
-		ActUserID:    user.ID,
-		ActUserName:  user.Name,
-		RepoID:       repo.ID,
-		RepoName:     repo.Name,
-		RepoUserName: repo.Owner.Name,
-		IsPrivate:    repo.IsPrivate,
-		Content:      oldRepoName,
+		OpType:    ActionRenameRepo,
+		ActUserID: user.ID,
+		ActUser:   user,
+		RepoID:    repo.ID,
+		Repo:      repo,
+		IsPrivate: repo.IsPrivate,
+		Content:   oldRepoName,
 	}
 	AssertNotExistsBean(t, actionBean)
 	assert.NoError(t, RenameRepoAction(user, oldRepoName, repo))
@@ -163,7 +161,7 @@ func TestUpdateIssuesCommit(t *testing.T) {
 			CommitterName:  "User Two",
 			AuthorEmail:    "user4@example.com",
 			AuthorName:     "User Four",
-			Message:        "start working on #1",
+			Message:        "start working on #FST-1, #1",
 		},
 		{
 			Sha1:           "abcdef2",
@@ -232,13 +230,13 @@ func TestCommitRepoAction(t *testing.T) {
 	pushCommits.Len = len(pushCommits.Commits)
 
 	actionBean := &Action{
-		OpType:      ActionCommitRepo,
-		ActUserID:   user.ID,
-		ActUserName: user.Name,
-		RepoID:      repo.ID,
-		RepoName:    repo.Name,
-		RefName:     "refName",
-		IsPrivate:   repo.IsPrivate,
+		OpType:    ActionCommitRepo,
+		ActUserID: user.ID,
+		ActUser:   user,
+		RepoID:    repo.ID,
+		Repo:      repo,
+		RefName:   "refName",
+		IsPrivate: repo.IsPrivate,
 	}
 	AssertNotExistsBean(t, actionBean)
 	assert.NoError(t, CommitRepoAction(CommitRepoActionOptions{
@@ -265,13 +263,12 @@ func TestTransferRepoAction(t *testing.T) {
 	repo.Owner = user4
 
 	actionBean := &Action{
-		OpType:       ActionTransferRepo,
-		ActUserID:    user2.ID,
-		ActUserName:  user2.Name,
-		RepoID:       repo.ID,
-		RepoName:     repo.Name,
-		RepoUserName: repo.Owner.Name,
-		IsPrivate:    repo.IsPrivate,
+		OpType:    ActionTransferRepo,
+		ActUserID: user2.ID,
+		ActUser:   user2,
+		RepoID:    repo.ID,
+		Repo:      repo,
+		IsPrivate: repo.IsPrivate,
 	}
 	AssertNotExistsBean(t, actionBean)
 	assert.NoError(t, TransferRepoAction(user2, user2, repo))
@@ -290,13 +287,12 @@ func TestMergePullRequestAction(t *testing.T) {
 	issue := AssertExistsAndLoadBean(t, &Issue{ID: 3, RepoID: repo.ID}).(*Issue)
 
 	actionBean := &Action{
-		OpType:       ActionMergePullRequest,
-		ActUserID:    user.ID,
-		ActUserName:  user.Name,
-		RepoID:       repo.ID,
-		RepoName:     repo.Name,
-		RepoUserName: repo.Owner.Name,
-		IsPrivate:    repo.IsPrivate,
+		OpType:    ActionMergePullRequest,
+		ActUserID: user.ID,
+		ActUser:   user,
+		RepoID:    repo.ID,
+		Repo:      repo,
+		IsPrivate: repo.IsPrivate,
 	}
 	AssertNotExistsBean(t, actionBean)
 	assert.NoError(t, MergePullRequestAction(user, repo, issue))
@@ -309,13 +305,24 @@ func TestGetFeeds(t *testing.T) {
 	assert.NoError(t, PrepareTestDatabase())
 	user := AssertExistsAndLoadBean(t, &User{ID: 2}).(*User)
 
-	actions, err := GetFeeds(user, user.ID, 0, false)
+	actions, err := GetFeeds(GetFeedsOptions{
+		RequestedUser:    user,
+		RequestingUserID: user.ID,
+		IncludePrivate:   true,
+		OnlyPerformedBy:  false,
+		IncludeDeleted:   true,
+	})
 	assert.NoError(t, err)
 	assert.Len(t, actions, 1)
-	assert.Equal(t, int64(1), actions[0].ID)
-	assert.Equal(t, user.ID, actions[0].UserID)
+	assert.EqualValues(t, 1, actions[0].ID)
+	assert.EqualValues(t, user.ID, actions[0].UserID)
 
-	actions, err = GetFeeds(user, user.ID, 0, true)
+	actions, err = GetFeeds(GetFeedsOptions{
+		RequestedUser:    user,
+		RequestingUserID: user.ID,
+		IncludePrivate:   false,
+		OnlyPerformedBy:  false,
+	})
 	assert.NoError(t, err)
 	assert.Len(t, actions, 0)
 }
@@ -323,15 +330,28 @@ func TestGetFeeds(t *testing.T) {
 func TestGetFeeds2(t *testing.T) {
 	// test with an organization user
 	assert.NoError(t, PrepareTestDatabase())
-	user := AssertExistsAndLoadBean(t, &User{ID: 3}).(*User)
+	org := AssertExistsAndLoadBean(t, &User{ID: 3}).(*User)
+	userID := AssertExistsAndLoadBean(t, &OrgUser{OrgID: org.ID, IsOwner: true}).(*OrgUser).UID
 
-	actions, err := GetFeeds(user, user.ID, 0, false)
+	actions, err := GetFeeds(GetFeedsOptions{
+		RequestedUser:    org,
+		RequestingUserID: userID,
+		IncludePrivate:   true,
+		OnlyPerformedBy:  false,
+		IncludeDeleted:   true,
+	})
 	assert.NoError(t, err)
 	assert.Len(t, actions, 1)
-	assert.Equal(t, int64(2), actions[0].ID)
-	assert.Equal(t, user.ID, actions[0].UserID)
+	assert.EqualValues(t, 2, actions[0].ID)
+	assert.EqualValues(t, org.ID, actions[0].UserID)
 
-	actions, err = GetFeeds(user, user.ID, 0, true)
+	actions, err = GetFeeds(GetFeedsOptions{
+		RequestedUser:    org,
+		RequestingUserID: userID,
+		IncludePrivate:   false,
+		OnlyPerformedBy:  false,
+		IncludeDeleted:   true,
+	})
 	assert.NoError(t, err)
 	assert.Len(t, actions, 0)
 }

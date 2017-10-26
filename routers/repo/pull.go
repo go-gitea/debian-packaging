@@ -61,6 +61,8 @@ func getForkRepository(ctx *context.Context) *models.Repository {
 	ctx.Data["repo_name"] = forkRepo.Name
 	ctx.Data["description"] = forkRepo.Description
 	ctx.Data["IsPrivate"] = forkRepo.IsPrivate
+	canForkToUser := forkRepo.OwnerID != ctx.User.ID && !ctx.User.HasForkedRepo(forkRepo.ID)
+	ctx.Data["CanForkToUser"] = canForkToUser
 
 	if err = forkRepo.GetOwner(); err != nil {
 		ctx.Handle(500, "GetOwner", err)
@@ -69,11 +71,23 @@ func getForkRepository(ctx *context.Context) *models.Repository {
 	ctx.Data["ForkFrom"] = forkRepo.Owner.Name + "/" + forkRepo.Name
 	ctx.Data["ForkFromOwnerID"] = forkRepo.Owner.ID
 
-	if err := ctx.User.GetOrganizations(true); err != nil {
-		ctx.Handle(500, "GetOrganizations", err)
+	if err := ctx.User.GetOwnedOrganizations(); err != nil {
+		ctx.Handle(500, "GetOwnedOrganizations", err)
 		return nil
 	}
-	ctx.Data["Orgs"] = ctx.User.Orgs
+	var orgs []*models.User
+	for _, org := range ctx.User.OwnedOrgs {
+		if forkRepo.OwnerID != org.ID && !org.HasForkedRepo(forkRepo.ID) {
+			orgs = append(orgs, org)
+		}
+	}
+	ctx.Data["Orgs"] = orgs
+
+	if canForkToUser {
+		ctx.Data["ContextUser"] = ctx.User
+	} else if len(orgs) > 0 {
+		ctx.Data["ContextUser"] = orgs[0]
+	}
 
 	return forkRepo
 }
@@ -87,7 +101,6 @@ func Fork(ctx *context.Context) {
 		return
 	}
 
-	ctx.Data["ContextUser"] = ctx.User
 	ctx.HTML(200, tplFork)
 }
 
@@ -95,19 +108,26 @@ func Fork(ctx *context.Context) {
 func ForkPost(ctx *context.Context, form auth.CreateRepoForm) {
 	ctx.Data["Title"] = ctx.Tr("new_fork")
 
+	ctxUser := checkContextUser(ctx, form.UID)
+	if ctx.Written() {
+		return
+	}
+
 	forkRepo := getForkRepository(ctx)
 	if ctx.Written() {
 		return
 	}
 
-	ctxUser := checkContextUser(ctx, form.UID)
-	if ctx.Written() {
-		return
-	}
 	ctx.Data["ContextUser"] = ctxUser
 
 	if ctx.HasError() {
 		ctx.HTML(200, tplFork)
+		return
+	}
+
+	repo, has := models.HasForkedRepo(ctxUser.ID, forkRepo.ID)
+	if has {
+		ctx.Redirect(setting.AppSubURL + "/" + ctxUser.Name + "/" + repo.Name)
 		return
 	}
 
@@ -256,8 +276,6 @@ func ViewPullCommits(ctx *context.Context) {
 		return
 	}
 	pull := issue.PullRequest
-	ctx.Data["Username"] = pull.HeadUserName
-	ctx.Data["Reponame"] = pull.HeadRepo.Name
 
 	var commits *list.List
 	if pull.HasMerged {
@@ -265,6 +283,9 @@ func ViewPullCommits(ctx *context.Context) {
 		if ctx.Written() {
 			return
 		}
+		ctx.Data["Username"] = ctx.Repo.Owner.Name
+		ctx.Data["Reponame"] = ctx.Repo.Repository.Name
+
 		startCommit, err := ctx.Repo.GitRepo.GetCommit(pull.MergeBase)
 		if err != nil {
 			ctx.Handle(500, "Repo.GitRepo.GetCommit", err)
@@ -280,7 +301,6 @@ func ViewPullCommits(ctx *context.Context) {
 			ctx.Handle(500, "Repo.GitRepo.CommitsBetween", err)
 			return
 		}
-
 	} else {
 		prInfo := PrepareViewPullInfo(ctx, issue)
 		if ctx.Written() {
@@ -289,10 +309,14 @@ func ViewPullCommits(ctx *context.Context) {
 			ctx.Handle(404, "ViewPullCommits", nil)
 			return
 		}
+		ctx.Data["Username"] = pull.HeadUserName
+		ctx.Data["Reponame"] = pull.HeadRepo.Name
 		commits = prInfo.Commits
 	}
 
 	commits = models.ValidateCommitsWithEmails(commits)
+	commits = models.ParseCommitsWithSignature(commits)
+	commits = models.ParseCommitsWithStatus(commits, ctx.Repo.Repository)
 	ctx.Data["Commits"] = commits
 	ctx.Data["CommitCount"] = commits.Len()
 
@@ -317,6 +341,7 @@ func ViewPullFiles(ctx *context.Context) {
 		gitRepo       *git.Repository
 	)
 
+	var headTarget string
 	if pull.HasMerged {
 		PrepareMergedViewPullInfo(ctx, issue)
 		if ctx.Written() {
@@ -327,6 +352,10 @@ func ViewPullFiles(ctx *context.Context) {
 		startCommitID = pull.MergeBase
 		endCommitID = pull.MergedCommitID
 		gitRepo = ctx.Repo.GitRepo
+
+		headTarget = path.Join(ctx.Repo.Owner.Name, ctx.Repo.Repository.Name)
+		ctx.Data["Username"] = ctx.Repo.Owner.Name
+		ctx.Data["Reponame"] = ctx.Repo.Repository.Name
 	} else {
 		prInfo := PrepareViewPullInfo(ctx, issue)
 		if ctx.Written() {
@@ -354,6 +383,10 @@ func ViewPullFiles(ctx *context.Context) {
 		startCommitID = prInfo.MergeBase
 		endCommitID = headCommitID
 		gitRepo = headGitRepo
+
+		headTarget = path.Join(pull.HeadUserName, pull.HeadRepo.Name)
+		ctx.Data["Username"] = pull.HeadUserName
+		ctx.Data["Reponame"] = pull.HeadRepo.Name
 	}
 
 	diff, err := models.GetDiffRange(diffRepoPath,
@@ -372,9 +405,6 @@ func ViewPullFiles(ctx *context.Context) {
 		return
 	}
 
-	headTarget := path.Join(pull.HeadUserName, pull.HeadRepo.Name)
-	ctx.Data["Username"] = pull.HeadUserName
-	ctx.Data["Reponame"] = pull.HeadRepo.Name
 	ctx.Data["IsImageFile"] = commit.IsImageFile
 	ctx.Data["SourcePath"] = setting.AppSubURL + "/" + path.Join(headTarget, "src", endCommitID)
 	ctx.Data["BeforeSourcePath"] = setting.AppSubURL + "/" + path.Join(headTarget, "src", startCommitID)
@@ -576,6 +606,8 @@ func PrepareCompareDiff(
 	}
 
 	prInfo.Commits = models.ValidateCommitsWithEmails(prInfo.Commits)
+	prInfo.Commits = models.ParseCommitsWithSignature(prInfo.Commits)
+	prInfo.Commits = models.ParseCommitsWithStatus(prInfo.Commits, headRepo)
 	ctx.Data["Commits"] = prInfo.Commits
 	ctx.Data["CommitCount"] = prInfo.Commits.Len()
 	ctx.Data["Username"] = headUser.Name
@@ -752,4 +784,131 @@ func TriggerTask(ctx *context.Context) {
 	go models.HookQueue.Add(repo.ID)
 	go models.AddTestPullRequestTask(pusher, repo.ID, branch, true)
 	ctx.Status(202)
+}
+
+// CleanUpPullRequest responses for delete merged branch when PR has been merged
+func CleanUpPullRequest(ctx *context.Context) {
+	issue := checkPullInfo(ctx)
+	if ctx.Written() {
+		return
+	}
+
+	pr, err := models.GetPullRequestByIssueID(issue.ID)
+	if err != nil {
+		if models.IsErrPullRequestNotExist(err) {
+			ctx.Handle(404, "GetPullRequestByIssueID", nil)
+		} else {
+			ctx.Handle(500, "GetPullRequestByIssueID", err)
+		}
+		return
+	}
+
+	// Allow cleanup only for merged PR
+	if !pr.HasMerged {
+		ctx.Handle(404, "CleanUpPullRequest", nil)
+		return
+	}
+
+	if err = pr.GetHeadRepo(); err != nil {
+		ctx.Handle(500, "GetHeadRepo", err)
+		return
+	} else if pr.HeadRepo == nil {
+		// Forked repository has already been deleted
+		ctx.Handle(404, "CleanUpPullRequest", nil)
+		return
+	} else if pr.GetBaseRepo(); err != nil {
+		ctx.Handle(500, "GetBaseRepo", err)
+		return
+	} else if pr.HeadRepo.GetOwner(); err != nil {
+		ctx.Handle(500, "HeadRepo.GetOwner", err)
+		return
+	}
+
+	if !ctx.User.IsWriterOfRepo(pr.HeadRepo) {
+		ctx.Handle(403, "CleanUpPullRequest", nil)
+		return
+	}
+
+	fullBranchName := pr.HeadRepo.Owner.Name + "/" + pr.HeadBranch
+
+	gitRepo, err := git.OpenRepository(pr.HeadRepo.RepoPath())
+	if err != nil {
+		ctx.Handle(500, fmt.Sprintf("OpenRepository[%s]", pr.HeadRepo.RepoPath()), err)
+		return
+	}
+
+	gitBaseRepo, err := git.OpenRepository(pr.BaseRepo.RepoPath())
+	if err != nil {
+		ctx.Handle(500, fmt.Sprintf("OpenRepository[%s]", pr.BaseRepo.RepoPath()), err)
+		return
+	}
+
+	defer func() {
+		ctx.JSON(200, map[string]interface{}{
+			"redirect": pr.BaseRepo.Link() + "/pulls/" + com.ToStr(issue.Index),
+		})
+	}()
+
+	if pr.HeadBranch == pr.HeadRepo.DefaultBranch || !gitRepo.IsBranchExist(pr.HeadBranch) {
+		ctx.Flash.Error(ctx.Tr("repo.branch.deletion_failed", fullBranchName))
+		return
+	}
+
+	// Check if branch is not protected
+	if protected, err := pr.HeadRepo.IsProtectedBranch(pr.HeadBranch); err != nil || protected {
+		if err != nil {
+			log.Error(4, "HeadRepo.IsProtectedBranch: %v", err)
+		}
+		ctx.Flash.Error(ctx.Tr("repo.branch.deletion_failed", fullBranchName))
+		return
+	}
+
+	// Check if branch has no new commits
+	if len(pr.MergedCommitID) > 0 {
+		branchCommitID, err := gitRepo.GetBranchCommitID(pr.HeadBranch)
+		if err != nil {
+			log.Error(4, "GetBranchCommitID: %v", err)
+			ctx.Flash.Error(ctx.Tr("repo.branch.deletion_failed", fullBranchName))
+			return
+		}
+
+		commit, err := gitBaseRepo.GetCommit(pr.MergedCommitID)
+		if err != nil {
+			log.Error(4, "GetCommit: %v", err)
+			ctx.Flash.Error(ctx.Tr("repo.branch.deletion_failed", fullBranchName))
+			return
+		}
+
+		isParent := false
+		for i := 0; i < commit.ParentCount(); i++ {
+			if parent, err := commit.Parent(i); err != nil {
+				log.Error(4, "Parent: %v", err)
+				ctx.Flash.Error(ctx.Tr("repo.branch.deletion_failed", fullBranchName))
+				return
+			} else if parent.ID.String() == branchCommitID {
+				isParent = true
+				break
+			}
+		}
+
+		if !isParent {
+			ctx.Flash.Error(ctx.Tr("repo.branch.delete_branch_has_new_commits", fullBranchName))
+			return
+		}
+	}
+
+	if err := gitRepo.DeleteBranch(pr.HeadBranch, git.DeleteBranchOptions{
+		Force: true,
+	}); err != nil {
+		log.Error(4, "DeleteBranch: %v", err)
+		ctx.Flash.Error(ctx.Tr("repo.branch.deletion_failed", fullBranchName))
+		return
+	}
+
+	if err := models.AddDeletePRBranchComment(ctx.User, pr.BaseRepo, issue.ID, pr.HeadBranch); err != nil {
+		// Do not fail here as branch has already been deleted
+		log.Error(4, "DeleteBranch: %v", err)
+	}
+
+	ctx.Flash.Success(ctx.Tr("repo.branch.deletion_success", fullBranchName))
 }

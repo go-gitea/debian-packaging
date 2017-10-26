@@ -13,6 +13,7 @@ import (
 	"github.com/go-xorm/xorm"
 	"gopkg.in/ini.v1"
 
+	"code.gitea.io/git"
 	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/process"
 	"code.gitea.io/gitea/modules/setting"
@@ -27,8 +28,8 @@ type Mirror struct {
 	ID          int64       `xorm:"pk autoincr"`
 	RepoID      int64       `xorm:"INDEX"`
 	Repo        *Repository `xorm:"-"`
-	Interval    int         // Hour.
-	EnablePrune bool        `xorm:"NOT NULL DEFAULT true"`
+	Interval    time.Duration
+	EnablePrune bool `xorm:"NOT NULL DEFAULT true"`
 
 	Updated        time.Time `xorm:"-"`
 	UpdatedUnix    int64     `xorm:"INDEX"`
@@ -61,14 +62,14 @@ func (m *Mirror) AfterSet(colName string, _ xorm.Cell) {
 		}
 	case "updated_unix":
 		m.Updated = time.Unix(m.UpdatedUnix, 0).Local()
-	case "next_updated_unix":
+	case "next_update_unix":
 		m.NextUpdate = time.Unix(m.NextUpdateUnix, 0).Local()
 	}
 }
 
 // ScheduleNextUpdate calculates and sets next update time.
 func (m *Mirror) ScheduleNextUpdate() {
-	m.NextUpdate = time.Now().Add(time.Duration(m.Interval) * time.Hour)
+	m.NextUpdate = time.Now().Add(m.Interval)
 }
 
 func (m *Mirror) readAddress() {
@@ -147,6 +148,20 @@ func (m *Mirror) runSync() bool {
 		}
 		return false
 	}
+
+	gitRepo, err := git.OpenRepository(repoPath)
+	if err != nil {
+		log.Error(4, "OpenRepository: %v", err)
+		return false
+	}
+	if err = SyncReleasesWithTags(m.Repo, gitRepo); err != nil {
+		log.Error(4, "Failed to synchronize tags to releases for repository: %v", err)
+	}
+
+	if err := m.Repo.UpdateSize(); err != nil {
+		log.Error(4, "Failed to update size for mirror repository: %v", err)
+	}
+
 	if m.Repo.HasWiki() {
 		if _, stderr, err := process.GetManager().ExecDir(
 			timeout, wikiPath, fmt.Sprintf("Mirror.runSync: %s", wikiPath),
@@ -197,10 +212,9 @@ func DeleteMirrorByRepoID(repoID int64) error {
 
 // MirrorUpdate checks and updates mirror repositories.
 func MirrorUpdate() {
-	if taskStatusTable.IsRunning(mirrorUpdate) {
+	if !taskStatusTable.StartIfNotRunning(mirrorUpdate) {
 		return
 	}
-	taskStatusTable.Start(mirrorUpdate)
 	defer taskStatusTable.Stop(mirrorUpdate)
 
 	log.Trace("Doing: MirrorUpdate")

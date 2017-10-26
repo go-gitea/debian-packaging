@@ -73,7 +73,7 @@ var sysStatus struct {
 }
 
 func updateSystemStatus() {
-	sysStatus.Uptime = base.TimeSincePro(startTime)
+	sysStatus.Uptime = base.TimeSincePro(startTime, "en")
 
 	m := new(runtime.MemStats)
 	runtime.ReadMemStats(m)
@@ -121,6 +121,7 @@ const (
 	syncSSHAuthorizedKey
 	syncRepositoryUpdateHook
 	reinitMissingRepository
+	syncExternalUsers
 )
 
 // Dashboard show admin panel dashboard
@@ -157,6 +158,9 @@ func Dashboard(ctx *context.Context) {
 		case reinitMissingRepository:
 			success = ctx.Tr("admin.dashboard.reinit_missing_repos_success")
 			err = models.ReinitMissingRepositories()
+		case syncExternalUsers:
+			success = ctx.Tr("admin.dashboard.sync_external_users_started")
+			go models.SyncExternalUsers()
 		}
 
 		if err != nil {
@@ -194,6 +198,7 @@ func Config(ctx *context.Context) {
 	ctx.Data["PageIsAdmin"] = true
 	ctx.Data["PageIsAdminConfig"] = true
 
+	ctx.Data["CustomConf"] = setting.CustomConf
 	ctx.Data["AppUrl"] = setting.AppURL
 	ctx.Data["Domain"] = setting.Domain
 	ctx.Data["OfflineMode"] = setting.OfflineMode

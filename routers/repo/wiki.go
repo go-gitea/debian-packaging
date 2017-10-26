@@ -19,6 +19,7 @@ import (
 	"code.gitea.io/gitea/modules/base"
 	"code.gitea.io/gitea/modules/context"
 	"code.gitea.io/gitea/modules/markdown"
+	"code.gitea.io/gitea/modules/markup"
 )
 
 const (
@@ -30,8 +31,8 @@ const (
 
 // MustEnableWiki check if wiki is enabled, if external then redirect
 func MustEnableWiki(ctx *context.Context) {
-	if !ctx.Repo.Repository.EnableUnit(models.UnitTypeWiki) &&
-		!ctx.Repo.Repository.EnableUnit(models.UnitTypeExternalWiki) {
+	if !ctx.Repo.Repository.UnitEnabled(models.UnitTypeWiki) &&
+		!ctx.Repo.Repository.UnitEnabled(models.UnitTypeExternalWiki) {
 		ctx.Handle(404, "MustEnableWiki", nil)
 		return
 	}
@@ -322,7 +323,7 @@ func Wiki(ctx *context.Context) {
 	}
 
 	ename := entry.Name()
-	if !markdown.IsMarkdownFile(ename) {
+	if markup.Type(ename) != markdown.MarkupName {
 		ext := strings.ToUpper(filepath.Ext(ename))
 		ctx.Data["FormatWarning"] = fmt.Sprintf("%s rendering is not supported at the moment. Rendered as Markdown.", ext)
 	}

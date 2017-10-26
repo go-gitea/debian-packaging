@@ -59,17 +59,23 @@ func (issues IssueList) loadPosters(e Engine) error {
 		return nil
 	}
 
-	postgerIDs := issues.getPosterIDs()
-	posterMaps := make(map[int64]*User, len(postgerIDs))
+	posterIDs := issues.getPosterIDs()
+	posterMaps := make(map[int64]*User, len(posterIDs))
 	err := e.
-		In("id", postgerIDs).
+		In("id", posterIDs).
 		Find(&posterMaps)
 	if err != nil {
 		return err
 	}
 
 	for _, issue := range issues {
-		issue.Poster = posterMaps[issue.PosterID]
+		if issue.PosterID <= 0 {
+			continue
+		}
+		var ok bool
+		if issue.Poster, ok = posterMaps[issue.PosterID]; !ok {
+			issue.Poster = NewGhostUser()
+		}
 	}
 	return nil
 }
@@ -173,7 +179,13 @@ func (issues IssueList) loadAssignees(e Engine) error {
 	}
 
 	for _, issue := range issues {
-		issue.Assignee = assigneeMaps[issue.AssigneeID]
+		if issue.AssigneeID <= 0 {
+			continue
+		}
+		var ok bool
+		if issue.Assignee, ok = assigneeMaps[issue.AssigneeID]; !ok {
+			issue.Assignee = NewGhostUser()
+		}
 	}
 	return nil
 }
