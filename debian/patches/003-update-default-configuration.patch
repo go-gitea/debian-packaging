@@ -5,7 +5,7 @@ Author: Michael Lustfield <michael@lustfield.net>
 Forwarded: not-needed
 --- a/conf/app.ini
 +++ b/conf/app.ini
-@@ -1,13 +1,13 @@
+@@ -1,12 +1,12 @@
  ; App name that shows on every page title
  APP_NAME = Gitea: Git with a cup of tea
  ; Change it if you run locally
@@ -17,21 +17,47 @@ Forwarded: not-needed
  
  [repository]
 -ROOT =
--SCRIPT_TYPE = bash
 +ROOT = /var/lib/gitea/repositories
-+SCRIPT_TYPE = sh
+ SCRIPT_TYPE = bash
  ; Default ANSI charset
  ANSI_CHARSET =
- ; Force every new repository to be private
-@@ -146,7 +146,7 @@
+@@ -34,13 +34,13 @@
+ 
+ [repository.local]
+ ; Path for uploads. Defaults to `tmp/local-repo`
+-LOCAL_COPY_PATH = tmp/local-repo
++LOCAL_COPY_PATH = /tmp/local-repo
+ 
+ [repository.upload]
+ ; Whether repository file uploads are enabled. Defaults to `true`
+ ENABLED = true
+ ; Path for uploads. Defaults to `data/tmp/uploads` (tmp gets deleted on gitea restart)
+-TEMP_PATH = data/tmp/uploads
++TEMP_PATH = /var/lib/gitea/data/tmp/uploads
+ ; One or more allowed types, e.g. image/jpeg|image/png. Nothing means any file type
+ ALLOWED_TYPES =
+ ; Max size of each file in MB. Defaults to 3MB
+@@ -146,9 +146,9 @@
  KEY_FILE = custom/https/key.pem
  ; Upper level of template and static file path
  ; default is the path where Gitea is executed
 -STATIC_ROOT_PATH =
 +STATIC_ROOT_PATH = /usr/share/gitea
  ; Default path for App data
- APP_DATA_PATH = data
+-APP_DATA_PATH = data
++APP_DATA_PATH = /var/lib/gitea/data
  ; Application level GZIP support
+ ENABLE_GZIP = false
+ ; Landing page for non-logged users, can be "home" or "explore"
+@@ -156,7 +156,7 @@
+ ; Enables git-lfs support. true or false, default is false.
+ LFS_START_SERVER = false
+ ; Where your lfs files put on, default is data/lfs.
+-LFS_CONTENT_PATH = data/lfs
++LFS_CONTENT_PATH = /var/lib/gitea/data/lfs
+ ; LFS authentication secret, changed this to yourself.
+ LFS_JWT_SECRET   =
+ 
 @@ -169,7 +169,7 @@
  
  [database]
@@ -41,6 +67,15 @@ Forwarded: not-needed
  HOST = 127.0.0.1:3306
  NAME = gitea
  USER = root
+@@ -177,7 +177,7 @@
+ ; For "postgres" only, either "disable", "require" or "verify-full"
+ SSL_MODE = disable
+ ; For "sqlite3" and "tidb", use absolute path when you start as service
+-PATH = data/gitea.db
++PATH = /var/lib/gitea/data/gitea.db
+ ; For "sqlite3" only. Query timeout
+ SQLITE_TIMEOUT = 500
+ 
 @@ -191,9 +191,9 @@
  
  [security]
@@ -53,6 +88,33 @@ Forwarded: not-needed
  ; Auto-login remember days
  LOGIN_REMEMBER_DAYS = 7
  COOKIE_USERNAME = gitea_awesome
+@@ -329,7 +329,7 @@
+ ; file: session file path, e.g. `data/sessions`
+ ; redis: network=tcp,addr=:6379,password=macaron,db=0,pool_size=100,idle_timeout=180
+ ; mysql: go-sql-driver/mysql dsn config string, e.g. `root:password@/session_table`
+-PROVIDER_CONFIG = data/sessions
++PROVIDER_CONFIG = /var/lib/gitea/data/sessions
+ ; Session cookie name
+ COOKIE_NAME = i_like_gitea
+ ; If you use session in https only, default is false
+@@ -342,7 +342,7 @@
+ SESSION_LIFE_TIME = 86400
+ 
+ [picture]
+-AVATAR_UPLOAD_PATH = data/avatars
++AVATAR_UPLOAD_PATH = /var/lib/gitea/data/avatars
+ ; Chinese users can choose "duoshuo"
+ ; or a custom avatar source, like: http://cn.gravatar.com/avatar/
+ GRAVATAR_SOURCE = gravatar
+@@ -357,7 +357,7 @@
+ ; Whether attachments are enabled. Defaults to `true`
+ ENABLE = true
+ ; Path for attachments. Defaults to `data/attachments`
+-PATH = data/attachments
++PATH = /var/lib/gitea/data/attachments
+ ; One or more allowed types, e.g. image/jpeg|image/png
+ ALLOWED_TYPES = image/jpeg|image/png|application/zip|application/gzip
+ ; Max size of each file. Defaults to 32MB
 @@ -372,24 +372,24 @@
  FORMAT =
  
