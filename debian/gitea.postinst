@@ -14,7 +14,7 @@ case "$1" in
                     --system \
                     --disabled-login \
                     --no-create-home \
-                    --shell /bin/rbash \
+                    --shell /bin/bash \
                     --ingroup gitea \
                     --home /var/lib/gitea \
                     --gecos "Gitea Daemon" \
