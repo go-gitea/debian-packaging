@@ -23,7 +23,7 @@ Forwarded: not-needed
  ; Default ANSI charset
  ANSI_CHARSET =
  ; Force every new repository to be private
-@@ -131,7 +131,7 @@
+@@ -146,7 +146,7 @@
  KEY_FILE = custom/https/key.pem
  ; Upper level of template and static file path
  ; default is the path where Gitea is executed
@@ -32,16 +32,16 @@ Forwarded: not-needed
  ; Default path for App data
  APP_DATA_PATH = data
  ; Application level GZIP support
-@@ -148,7 +148,7 @@
+@@ -169,7 +169,7 @@
  
  [database]
- ; Either "mysql", "postgres" or "sqlite3", it's your choice
+ ; Either "mysql", "postgres", "mssql" or "sqlite3", it's your choice
 -DB_TYPE = mysql
 +DB_TYPE = sqlite3
  HOST = 127.0.0.1:3306
  NAME = gitea
  USER = root
-@@ -168,9 +168,9 @@
+@@ -191,9 +191,9 @@
  
  [security]
  ; Whether the installer is disabled
@@ -53,7 +53,7 @@ Forwarded: not-needed
  ; Auto-login remember days
  LOGIN_REMEMBER_DAYS = 7
  COOKIE_USERNAME = gitea_awesome
-@@ -310,24 +310,24 @@
+@@ -372,24 +372,24 @@
  FORMAT =
  
  [log]

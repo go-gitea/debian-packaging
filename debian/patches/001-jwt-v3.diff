@@ -1,9 +1,9 @@
 Debian maintains a versioned name of this package.
 --- a/cmd/serv.go
 +++ b/cmd/serv.go
-@@ -18,7 +18,7 @@
- 	"code.gitea.io/gitea/modules/log"
+@@ -20,7 +20,7 @@
  	"code.gitea.io/gitea/modules/setting"
+ 
  	"github.com/Unknwon/com"
 -	"github.com/dgrijalva/jwt-go"
 +	"github.com/dgrijalva/jwt-go-v3"
@@ -21,3 +21,14 @@ Debian maintains a versioned name of this package.
  	"gopkg.in/macaron.v1"
  )
  
+--- a/modules/setting/setting.go
++++ b/modules/setting/setting.go
+@@ -29,7 +29,7 @@
+ 	"code.gitea.io/gitea/modules/user"
+ 
+ 	"github.com/Unknwon/com"
+-	"github.com/dgrijalva/jwt-go"
++	"github.com/dgrijalva/jwt-go-v3"
+ 	_ "github.com/go-macaron/cache/memcache" // memcache plugin for cache
+ 	_ "github.com/go-macaron/cache/redis"
+ 	"github.com/go-macaron/session"
