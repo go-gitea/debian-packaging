@@ -146,7 +146,6 @@ Depends: adduser,
          libcap2-bin,
          ${misc:Depends},
          ${shlibs:Depends}
-Provides: gogs
 Description: Painless self-hosted git service
  Gitea is a self-hosted git service aiming to provide a full suite of
  features similar to Gitlab or Github. It aims to be light weight,
