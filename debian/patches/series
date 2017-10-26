@@ -1,3 +1,4 @@
 001-jwt-v3.diff
 002-go-crypto.diff
 003-update-default-configuration.patch
+004-aes-encrypt.diff
