@@ -7,16 +7,17 @@ package admin
 import (
 	"fmt"
 
-	"github.com/Unknwon/com"
-	"github.com/go-xorm/core"
-
 	"code.gitea.io/gitea/models"
 	"code.gitea.io/gitea/modules/auth"
 	"code.gitea.io/gitea/modules/auth/ldap"
+	"code.gitea.io/gitea/modules/auth/oauth2"
 	"code.gitea.io/gitea/modules/base"
 	"code.gitea.io/gitea/modules/context"
 	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/setting"
+
+	"github.com/Unknwon/com"
+	"github.com/go-xorm/core"
 )
 
 const (
@@ -73,10 +74,12 @@ func NewAuthSource(ctx *context.Context) {
 	ctx.Data["CurrentSecurityProtocol"] = models.SecurityProtocolNames[ldap.SecurityProtocolUnencrypted]
 	ctx.Data["smtp_auth"] = "PLAIN"
 	ctx.Data["is_active"] = true
+	ctx.Data["is_sync_enabled"] = true
 	ctx.Data["AuthSources"] = authSources
 	ctx.Data["SecurityProtocols"] = securityProtocols
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
 	ctx.Data["OAuth2Providers"] = models.OAuth2Providers
+	ctx.Data["OAuth2DefaultCustomURLMappings"] = models.OAuth2DefaultCustomURLMappings
 
 	// only the first as default
 	for key := range models.OAuth2Providers {
@@ -123,10 +126,23 @@ func parseSMTPConfig(form auth.AuthenticationForm) *models.SMTPConfig {
 }
 
 func parseOAuth2Config(form auth.AuthenticationForm) *models.OAuth2Config {
+	var customURLMapping *oauth2.CustomURLMapping
+	if form.Oauth2UseCustomURL {
+		customURLMapping = &oauth2.CustomURLMapping{
+			TokenURL:   form.Oauth2TokenURL,
+			AuthURL:    form.Oauth2AuthURL,
+			ProfileURL: form.Oauth2ProfileURL,
+			EmailURL:   form.Oauth2EmailURL,
+		}
+	} else {
+		customURLMapping = nil
+	}
 	return &models.OAuth2Config{
-		Provider:     form.Oauth2Provider,
-		ClientID:     form.Oauth2Key,
-		ClientSecret: form.Oauth2Secret,
+		Provider:                      form.Oauth2Provider,
+		ClientID:                      form.Oauth2Key,
+		ClientSecret:                  form.Oauth2Secret,
+		OpenIDConnectAutoDiscoveryURL: form.OpenIDConnectAutoDiscoveryURL,
+		CustomURLMapping:              customURLMapping,
 	}
 }
 
@@ -142,6 +158,7 @@ func NewAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	ctx.Data["SecurityProtocols"] = securityProtocols
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
 	ctx.Data["OAuth2Providers"] = models.OAuth2Providers
+	ctx.Data["OAuth2DefaultCustomURLMappings"] = models.OAuth2DefaultCustomURLMappings
 
 	hasTLS := false
 	var config core.Conversion
@@ -170,10 +187,11 @@ func NewAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 	}
 
 	if err := models.CreateLoginSource(&models.LoginSource{
-		Type:      models.LoginType(form.Type),
-		Name:      form.Name,
-		IsActived: form.IsActive,
-		Cfg:       config,
+		Type:          models.LoginType(form.Type),
+		Name:          form.Name,
+		IsActived:     form.IsActive,
+		IsSyncEnabled: form.IsSyncEnabled,
+		Cfg:           config,
 	}); err != nil {
 		if models.IsErrLoginSourceAlreadyExist(err) {
 			ctx.Data["Err_Name"] = true
@@ -199,6 +217,7 @@ func EditAuthSource(ctx *context.Context) {
 	ctx.Data["SecurityProtocols"] = securityProtocols
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
 	ctx.Data["OAuth2Providers"] = models.OAuth2Providers
+	ctx.Data["OAuth2DefaultCustomURLMappings"] = models.OAuth2DefaultCustomURLMappings
 
 	source, err := models.GetLoginSourceByID(ctx.ParamsInt64(":authid"))
 	if err != nil {
@@ -222,6 +241,7 @@ func EditAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 
 	ctx.Data["SMTPAuths"] = models.SMTPAuths
 	ctx.Data["OAuth2Providers"] = models.OAuth2Providers
+	ctx.Data["OAuth2DefaultCustomURLMappings"] = models.OAuth2DefaultCustomURLMappings
 
 	source, err := models.GetLoginSourceByID(ctx.ParamsInt64(":authid"))
 	if err != nil {
@@ -255,9 +275,15 @@ func EditAuthSourcePost(ctx *context.Context, form auth.AuthenticationForm) {
 
 	source.Name = form.Name
 	source.IsActived = form.IsActive
+	source.IsSyncEnabled = form.IsSyncEnabled
 	source.Cfg = config
 	if err := models.UpdateSource(source); err != nil {
-		ctx.Handle(500, "UpdateSource", err)
+		if models.IsErrOpenIDConnectInitialize(err) {
+			ctx.Flash.Error(err.Error(), true)
+			ctx.HTML(200, tplAuthEdit)
+		} else {
+			ctx.Handle(500, "UpdateSource", err)
+		}
 		return
 	}
 	log.Trace("Authentication changed by admin(%s): %d", ctx.User.Name, source.ID)

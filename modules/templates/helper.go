@@ -66,6 +66,7 @@ func NewFuncMap() []template.FuncMap {
 		},
 		"AvatarLink":   base.AvatarLink,
 		"Safe":         Safe,
+		"SafeJS":       SafeJS,
 		"Sanitize":     bluemonday.UGCPolicy().Sanitize,
 		"Str2html":     Str2html,
 		"TimeSince":    base.TimeSince,
@@ -81,6 +82,9 @@ func NewFuncMap() []template.FuncMap {
 		},
 		"DateFmtShort": func(t time.Time) string {
 			return t.Format("Jan 02, 2006")
+		},
+		"SizeFmt": func(s int64) string {
+			return base.FileSize(s)
 		},
 		"List": List,
 		"SubStr": func(str string, start, length int) string {
@@ -109,6 +113,15 @@ func NewFuncMap() []template.FuncMap {
 		"RenderCommitMessage": RenderCommitMessage,
 		"ThemeColorMetaTag": func() string {
 			return setting.UI.ThemeColorMetaTag
+		},
+		"MetaAuthor": func() string {
+			return setting.UI.Meta.Author
+		},
+		"MetaDescription": func() string {
+			return setting.UI.Meta.Description
+		},
+		"MetaKeywords": func() string {
+			return setting.UI.Meta.Keywords
 		},
 		"FilenameIsImage": func(filename string) bool {
 			mimeType := mime.TypeByExtension(filepath.Ext(filename))
@@ -148,6 +161,11 @@ func NewFuncMap() []template.FuncMap {
 // Safe render raw as HTML
 func Safe(raw string) template.HTML {
 	return template.HTML(raw)
+}
+
+// SafeJS renders raw as JS
+func SafeJS(raw string) template.JS {
+	return template.JS(raw)
 }
 
 // Str2html render Markdown text to HTML

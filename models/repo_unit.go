@@ -75,8 +75,8 @@ func (r *RepoUnit) BeforeSet(colName string, val xorm.Cell) {
 	switch colName {
 	case "type":
 		switch UnitType(Cell2Int64(val)) {
-		case UnitTypeCode, UnitTypeIssues, UnitTypePullRequests, UnitTypeCommits, UnitTypeReleases,
-			UnitTypeWiki, UnitTypeSettings:
+		case UnitTypeCode, UnitTypeIssues, UnitTypePullRequests, UnitTypeReleases,
+			UnitTypeWiki:
 			r.Config = new(UnitConfig)
 		case UnitTypeExternalWiki:
 			r.Config = new(ExternalWikiConfig)
@@ -116,11 +116,6 @@ func (r *RepoUnit) PullRequestsConfig() *UnitConfig {
 	return r.Config.(*UnitConfig)
 }
 
-// CommitsConfig returns config for UnitTypeCommits
-func (r *RepoUnit) CommitsConfig() *UnitConfig {
-	return r.Config.(*UnitConfig)
-}
-
 // ReleasesConfig returns config for UnitTypeReleases
 func (r *RepoUnit) ReleasesConfig() *UnitConfig {
 	return r.Config.(*UnitConfig)
@@ -134,4 +129,12 @@ func (r *RepoUnit) ExternalWikiConfig() *ExternalWikiConfig {
 // ExternalTrackerConfig returns config for UnitTypeExternalTracker
 func (r *RepoUnit) ExternalTrackerConfig() *ExternalTrackerConfig {
 	return r.Config.(*ExternalTrackerConfig)
+}
+
+func getUnitsByRepoID(e Engine, repoID int64) (units []*RepoUnit, err error) {
+	return units, e.Where("repo_id = ?", repoID).Find(&units)
+}
+
+func getUnitsByRepoIDAndIDs(e Engine, repoID int64, types []UnitType) (units []*RepoUnit, err error) {
+	return units, e.Where("repo_id = ?", repoID).In("`type`", types).Find(&units)
 }

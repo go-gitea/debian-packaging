@@ -14,6 +14,7 @@ import (
 	"code.gitea.io/gitea/modules/process"
 	"code.gitea.io/gitea/modules/setting"
 	api "code.gitea.io/sdk/gitea"
+	"github.com/go-xorm/builder"
 	"github.com/go-xorm/xorm"
 )
 
@@ -33,7 +34,8 @@ type Release struct {
 	NumCommitsBehind int64  `xorm:"-"`
 	Note             string `xorm:"TEXT"`
 	IsDraft          bool   `xorm:"NOT NULL DEFAULT false"`
-	IsPrerelease     bool
+	IsPrerelease     bool   `xorm:"NOT NULL DEFAULT false"`
+	IsTag            bool   `xorm:"NOT NULL DEFAULT false"`
 
 	Attachments []*Attachment `xorm:"-"`
 
@@ -73,7 +75,7 @@ func (r *Release) loadAttributes(e Engine) error {
 	return nil
 }
 
-// LoadAttributes load repo and publisher attributes for a realease
+// LoadAttributes load repo and publisher attributes for a release
 func (r *Release) LoadAttributes() error {
 	return r.loadAttributes(x)
 }
@@ -138,17 +140,18 @@ func createTag(gitRepo *git.Repository, rel *Release) error {
 				}
 				return err
 			}
-		} else {
-			commit, err := gitRepo.GetTagCommit(rel.TagName)
-			if err != nil {
-				return fmt.Errorf("GetTagCommit: %v", err)
-			}
+			rel.LowerTagName = strings.ToLower(rel.TagName)
+		}
+		commit, err := gitRepo.GetTagCommit(rel.TagName)
+		if err != nil {
+			return fmt.Errorf("GetTagCommit: %v", err)
+		}
 
-			rel.Sha1 = commit.ID.String()
-			rel.NumCommits, err = commit.CommitsCount()
-			if err != nil {
-				return fmt.Errorf("CommitsCount: %v", err)
-			}
+		rel.Sha1 = commit.ID.String()
+		rel.CreatedUnix = commit.Author.When.Unix()
+		rel.NumCommits, err = commit.CommitsCount()
+		if err != nil {
+			return fmt.Errorf("CommitsCount: %v", err)
 		}
 	}
 	return nil
@@ -232,25 +235,46 @@ func GetReleaseByID(id int64) (*Release, error) {
 	return rel, nil
 }
 
+// FindReleasesOptions describes the conditions to Find releases
+type FindReleasesOptions struct {
+	IncludeDrafts bool
+	IncludeTags   bool
+	TagNames      []string
+}
+
+func (opts *FindReleasesOptions) toConds(repoID int64) builder.Cond {
+	var cond = builder.NewCond()
+	cond = cond.And(builder.Eq{"repo_id": repoID})
+
+	if !opts.IncludeDrafts {
+		cond = cond.And(builder.Eq{"is_draft": false})
+	}
+	if !opts.IncludeTags {
+		cond = cond.And(builder.Eq{"is_tag": false})
+	}
+	if len(opts.TagNames) > 0 {
+		cond = cond.And(builder.In("tag_name", opts.TagNames))
+	}
+	return cond
+}
+
 // GetReleasesByRepoID returns a list of releases of repository.
-func GetReleasesByRepoID(repoID int64, page, pageSize int) (rels []*Release, err error) {
+func GetReleasesByRepoID(repoID int64, opts FindReleasesOptions, page, pageSize int) (rels []*Release, err error) {
 	if page <= 0 {
 		page = 1
 	}
+
 	err = x.
-		Desc("created_unix").
+		Desc("created_unix", "id").
 		Limit(pageSize, (page-1)*pageSize).
-		Find(&rels, Release{RepoID: repoID})
+		Where(opts.toConds(repoID)).
+		Find(&rels)
 	return rels, err
 }
 
-// GetReleasesByRepoIDAndNames returns a list of releases of repository according repoID and tagNames.
-func GetReleasesByRepoIDAndNames(repoID int64, tagNames []string) (rels []*Release, err error) {
-	err = x.
-		Desc("created_unix").
-		In("tag_name", tagNames).
-		Find(&rels, Release{RepoID: repoID})
-	return rels, err
+// GetReleaseCountByRepoID returns the count of releases of repository
+func GetReleaseCountByRepoID(repoID int64, opts FindReleasesOptions) (int64, error) {
+	return x.Where(opts.toConds(repoID)).Count(&Release{})
 }
 
 type releaseMetaSearch struct {
@@ -343,6 +367,8 @@ func UpdateRelease(gitRepo *git.Repository, rel *Release, attachmentUUIDs []stri
 	if err = createTag(gitRepo, rel); err != nil {
 		return err
 	}
+	rel.LowerTagName = strings.ToLower(rel.TagName)
+
 	_, err = x.Id(rel.ID).AllCols().Update(rel)
 	if err != nil {
 		return err
@@ -365,7 +391,7 @@ func DeleteReleaseByID(id int64, u *User, delTag bool) error {
 		return fmt.Errorf("GetRepositoryByID: %v", err)
 	}
 
-	has, err := HasAccess(u, repo, AccessModeWrite)
+	has, err := HasAccess(u.ID, repo, AccessModeWrite)
 	if err != nil {
 		return fmt.Errorf("HasAccess: %v", err)
 	} else if !has {
@@ -379,11 +405,64 @@ func DeleteReleaseByID(id int64, u *User, delTag bool) error {
 		if err != nil && !strings.Contains(stderr, "not found") {
 			return fmt.Errorf("git tag -d: %v - %s", err, stderr)
 		}
+
+		if _, err = x.Id(rel.ID).Delete(new(Release)); err != nil {
+			return fmt.Errorf("Delete: %v", err)
+		}
+	} else {
+		rel.IsTag = true
+		rel.IsDraft = false
+		rel.IsPrerelease = false
+		rel.Title = ""
+		rel.Note = ""
+
+		if _, err = x.Id(rel.ID).AllCols().Update(rel); err != nil {
+			return fmt.Errorf("Update: %v", err)
+		}
 	}
 
-	if _, err = x.Id(rel.ID).Delete(new(Release)); err != nil {
-		return fmt.Errorf("Delete: %v", err)
-	}
+	return nil
+}
 
+// SyncReleasesWithTags synchronizes release table with repository tags
+func SyncReleasesWithTags(repo *Repository, gitRepo *git.Repository) error {
+	existingRelTags := make(map[string]struct{})
+	opts := FindReleasesOptions{IncludeDrafts: true, IncludeTags: true}
+	for page := 1; ; page++ {
+		rels, err := GetReleasesByRepoID(repo.ID, opts, page, 100)
+		if err != nil {
+			return fmt.Errorf("GetReleasesByRepoID: %v", err)
+		}
+		if len(rels) == 0 {
+			break
+		}
+		for _, rel := range rels {
+			if rel.IsDraft {
+				continue
+			}
+			commitID, err := gitRepo.GetTagCommitID(rel.TagName)
+			if err != nil {
+				return fmt.Errorf("GetTagCommitID: %v", err)
+			}
+			if !gitRepo.IsTagExist(rel.TagName) || commitID != rel.Sha1 {
+				if err := pushUpdateDeleteTag(repo, gitRepo, rel.TagName); err != nil {
+					return fmt.Errorf("pushUpdateDeleteTag: %v", err)
+				}
+			} else {
+				existingRelTags[strings.ToLower(rel.TagName)] = struct{}{}
+			}
+		}
+	}
+	tags, err := gitRepo.GetTags()
+	if err != nil {
+		return fmt.Errorf("GetTags: %v", err)
+	}
+	for _, tagName := range tags {
+		if _, ok := existingRelTags[strings.ToLower(tagName)]; !ok {
+			if err := pushUpdateAddTag(repo, gitRepo, tagName); err != nil {
+				return fmt.Errorf("pushUpdateAddTag: %v", err)
+			}
+		}
+	}
 	return nil
 }

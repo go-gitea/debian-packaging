@@ -38,14 +38,17 @@ type InstallForm struct {
 	RegisterConfirm bool
 	MailNotify      bool
 
-	OfflineMode             bool
-	DisableGravatar         bool
-	EnableFederatedAvatar   bool
-	DisableRegistration     bool
-	EnableCaptcha           bool
-	RequireSignInView       bool
-	DefaultKeepEmailPrivate bool
-	NoReplyAddress          string
+	OfflineMode                    bool
+	DisableGravatar                bool
+	EnableFederatedAvatar          bool
+	EnableOpenIDSignIn             bool
+	EnableOpenIDSignUp             bool
+	DisableRegistration            bool
+	EnableCaptcha                  bool
+	RequireSignInView              bool
+	DefaultKeepEmailPrivate        bool
+	DefaultAllowCreateOrganization bool
+	NoReplyAddress                 string
 
 	AdminName          string `binding:"OmitEmpty;AlphaDashDot;MaxSize(30)" locale:"install.admin_name"`
 	AdminPasswd        string `binding:"OmitEmpty;MaxSize(255)" locale:"install.admin_password"`
@@ -53,7 +56,7 @@ type InstallForm struct {
 	AdminEmail         string `binding:"OmitEmpty;MinSize(3);MaxSize(254);Include(@)" locale:"install.admin_email"`
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *InstallForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -78,7 +81,7 @@ func (f *RegisterForm) Validate(ctx *macaron.Context, errs binding.Errors) bindi
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-// SignInForm form for signing in
+// SignInForm form for signing in with user/password
 type SignInForm struct {
 	UserName string `binding:"Required;MaxSize(254)"`
 	Password string `binding:"Required;MaxSize(255)"`
@@ -99,15 +102,15 @@ func (f *SignInForm) Validate(ctx *macaron.Context, errs binding.Errors) binding
 
 // UpdateProfileForm form for updating profile
 type UpdateProfileForm struct {
-	Name             string `binding:"OmitEmpty;MaxSize(35)"`
+	Name             string `binding:"AlphaDashDot;MaxSize(35)"`
 	FullName         string `binding:"MaxSize(100)"`
 	Email            string `binding:"Required;Email;MaxSize(254)"`
 	KeepEmailPrivate bool
-	Website          string `binding:"Url;MaxSize(255)"`
+	Website          string `binding:"ValidUrl;MaxSize(255)"`
 	Location         string `binding:"MaxSize(50)"`
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *UpdateProfileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -126,7 +129,7 @@ type AvatarForm struct {
 	Federavatar bool
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *AvatarForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -136,7 +139,7 @@ type AddEmailForm struct {
 	Email string `binding:"Required;Email;MaxSize(254)"`
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *AddEmailForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -148,19 +151,30 @@ type ChangePasswordForm struct {
 	Retype      string `form:"retype"`
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *ChangePasswordForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
-// AddSSHKeyForm form for adding SSH key
-type AddSSHKeyForm struct {
+// AddOpenIDForm is for changing openid uri
+type AddOpenIDForm struct {
+	Openid string `binding:"Required;MaxSize(256)"`
+}
+
+// Validate validates the fields
+func (f *AddOpenIDForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+// AddKeyForm form for adding SSH/GPG key
+type AddKeyForm struct {
+	Type    string `binding:"OmitEmpty"`
 	Title   string `binding:"Required;MaxSize(50)"`
 	Content string `binding:"Required"`
 }
 
-// Validate valideates the fields
-func (f *AddSSHKeyForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+// Validate validates the fields
+func (f *AddKeyForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
@@ -179,7 +193,7 @@ type TwoFactorAuthForm struct {
 	Passcode string `binding:"Required"`
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *TwoFactorAuthForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }

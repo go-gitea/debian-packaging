@@ -92,8 +92,46 @@ var migrations = []Migration{
 	NewMigration("use new avatar path name for security reason", useNewNameAvatars),
 	// v21 -> v22
 	NewMigration("rewrite authorized_keys file via new format", useNewPublickeyFormat),
-	// v21 -> v22
+	// v22 -> v23
 	NewMigration("generate and migrate wiki Git hooks", generateAndMigrateWikiGitHooks),
+	// v23 -> v24
+	NewMigration("add user openid table", addUserOpenID),
+	// v24 -> v25
+	NewMigration("change the key_id and primary_key_id type", changeGPGKeysColumns),
+	// v25 -> v26
+	NewMigration("add show field in user openid table", addUserOpenIDShow),
+	// v26 -> v27
+	NewMigration("generate and migrate repo and wiki Git hooks", generateAndMigrateGitHookChains),
+	// v27 -> v28
+	NewMigration("change mirror interval from hours to time.Duration", convertIntervalToDuration),
+	// v28 -> v29
+	NewMigration("add field for repo size", addRepoSize),
+	// v29 -> v30
+	NewMigration("add commit status table", addCommitStatus),
+	// v30 -> 31
+	NewMigration("add primary key to external login user", addExternalLoginUserPK),
+	// 31 -> 32
+	NewMigration("add field for login source synchronization", addLoginSourceSyncEnabledColumn),
+	// v32 -> v33
+	NewMigration("add units for team", addUnitsToRepoTeam),
+	// v33 -> v34
+	NewMigration("remove columns from action", removeActionColumns),
+	// v34 -> v35
+	NewMigration("give all units to owner teams", giveAllUnitsToOwnerTeams),
+	// v35 -> v36
+	NewMigration("adds comment to an action", addCommentIDToAction),
+	// v36 -> v37
+	NewMigration("regenerate git hooks", regenerateGitHooks36),
+	// v37 -> v38
+	NewMigration("unescape user full names", unescapeUserFullNames),
+	// v38 -> v39
+	NewMigration("remove commits and settings unit types", removeCommitsUnitType),
+	// v43 -> v44
+	NewMigration("fix protected branch can push value to false", fixProtectedBranchCanPushValue),
+	// v42 -> v43
+	NewMigration("add tags to releases and sync existing repositories", releaseAddColumnIsTagAndSyncTags),
+	// v44 -> v45
+	NewMigration("remove duplicate unit types", removeDuplicateUnitTypes),
 }
 
 // Migrate database to current version
@@ -143,13 +181,6 @@ Please try to upgrade to a lower version (>= v0.6.0) first, then upgrade to curr
 	return nil
 }
 
-func sessionRelease(sess *xorm.Session) {
-	if !sess.IsCommitedOrRollbacked {
-		sess.Rollback()
-	}
-	sess.Close()
-}
-
 func fixLocaleFileLoadPanic(_ *xorm.Engine) error {
 	cfg, err := ini.Load(setting.CustomConf)
 	if err != nil {
@@ -190,7 +221,7 @@ func trimCommitActionAppURLPrefix(x *xorm.Engine) error {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -263,7 +294,7 @@ func issueToIssueLabel(x *xorm.Engine) error {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -306,7 +337,7 @@ func attachmentRefactor(x *xorm.Engine) error {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -384,7 +415,7 @@ func renamePullRequestFields(x *xorm.Engine) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -468,7 +499,7 @@ func generateOrgRandsAndSalt(x *xorm.Engine) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -687,8 +718,7 @@ func convertDateToUnix(x *xorm.Engine) (err error) {
 		offset := 0
 		for {
 			beans := make([]*Bean, 0, 100)
-			if err = x.SQL(fmt.Sprintf("SELECT * FROM `%s` ORDER BY id ASC LIMIT 100 OFFSET %d",
-				table.name, offset)).Find(&beans); err != nil {
+			if err = x.Table(table.name).Asc("id").Limit(100, offset).Find(&beans); err != nil {
 				return fmt.Errorf("select beans [table: %s, offset: %d]: %v", table.name, offset, err)
 			}
 			log.Trace("Table [%s]: offset: %d, beans: %d", table.name, offset, len(beans))

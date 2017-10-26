@@ -1,3 +1,7 @@
+// Copyright 2017 The Gitea Authors. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
 package markdown_test
 
 import (
@@ -53,6 +57,31 @@ func link(href, contents string) string {
 func testRenderIssueIndexPattern(t *testing.T, input, expected string, metas map[string]string) {
 	assert.Equal(t, expected,
 		string(RenderIssueIndexPattern([]byte(input), AppSubURL, metas)))
+}
+
+func TestURLJoin(t *testing.T) {
+	type test struct {
+		Expected string
+		Base     string
+		Elements []string
+	}
+	newTest := func(expected, base string, elements ...string) test {
+		return test{Expected: expected, Base: base, Elements: elements}
+	}
+	for _, test := range []test{
+		newTest("https://try.gitea.io/a/b/c",
+			"https://try.gitea.io", "a/b", "c"),
+		newTest("https://try.gitea.io/a/b/c",
+			"https://try.gitea.io/", "/a/b/", "/c/"),
+		newTest("https://try.gitea.io/a/c",
+			"https://try.gitea.io/", "/a/./b/", "../c/"),
+		newTest("a/b/c",
+			"a", "b/c/"),
+		newTest("a/b/d",
+			"a/", "b/c/", "/../d/"),
+	} {
+		assert.Equal(t, test.Expected, URLJoin(test.Base, test.Elements...))
+	}
 }
 
 func TestRender_IssueIndexPattern(t *testing.T) {
@@ -180,13 +209,15 @@ func TestRender_AutoLink(t *testing.T) {
 		numericIssueLink(URLJoin(setting.AppSubURL, "issues"), 3333))
 
 	// render external issue URLs
-	tmp := "http://1111/2222/ssss-issues/3333?param=blah&blahh=333"
-	test(tmp, "<a href=\""+tmp+"\">#3333 <i class='comment icon'></i></a>")
-	test("http://test.com/issues/33333", numericIssueLink("http://test.com/issues", 33333))
-	test("https://issues/333", numericIssueLink("https://issues", 333))
+	for _, externalURL := range []string{
+		"http://1111/2222/ssss-issues/3333?param=blah&blahh=333",
+		"http://test.com/issues/33333",
+		"https://issues/333"} {
+		test(externalURL, externalURL)
+	}
 
 	// render valid commit URLs
-	tmp = URLJoin(AppSubURL, "commit", "d8a994ef243349f321568f9e36d5c3f444b99cae")
+	tmp := URLJoin(AppSubURL, "commit", "d8a994ef243349f321568f9e36d5c3f444b99cae")
 	test(tmp, "<a href=\""+tmp+"\">d8a994ef24</a>")
 	tmp += "#diff-2"
 	test(tmp, "<a href=\""+tmp+"\">d8a994ef24 (diff-2)</a>")
@@ -231,8 +262,10 @@ func TestRender_ShortLinks(t *testing.T) {
 
 	rawtree := URLJoin(AppSubURL, "raw", "master")
 	url := URLJoin(tree, "Link")
+	otherUrl := URLJoin(tree, "OtherLink")
 	imgurl := URLJoin(rawtree, "Link.jpg")
 	urlWiki := URLJoin(AppSubURL, "wiki", "Link")
+	otherUrlWiki := URLJoin(AppSubURL, "wiki", "OtherLink")
 	imgurlWiki := URLJoin(AppSubURL, "wiki", "raw", "Link.jpg")
 	favicon := "http://google.com/favicon.ico"
 
@@ -272,6 +305,10 @@ func TestRender_ShortLinks(t *testing.T) {
 		"[[Name|Link.jpg|alt=\"AltName\"|title='Title']]",
 		`<p><a href="`+imgurl+`" rel="nofollow"><img src="`+imgurl+`" alt="AltName" title="Title"/></a></p>`,
 		`<p><a href="`+imgurlWiki+`" rel="nofollow"><img src="`+imgurlWiki+`" alt="AltName" title="Title"/></a></p>`)
+	test(
+		"[[Link]] [[OtherLink]]",
+		`<p><a href="`+url+`" rel="nofollow">Link</a> <a href="`+otherUrl+`" rel="nofollow">OtherLink</a></p>`,
+		`<p><a href="`+urlWiki+`" rel="nofollow">Link</a> <a href="`+otherUrlWiki+`" rel="nofollow">OtherLink</a></p>`)
 }
 
 func TestRender_Commits(t *testing.T) {
@@ -290,8 +327,11 @@ func TestRender_Commits(t *testing.T) {
 	var src = strings.Replace(subtree, "/commit/", "/src/", -1)
 
 	test(sha, `<p><a href="`+commit+`" rel="nofollow">b6dd6210ea</a></p>`)
+	test(sha[:7], `<p><a href="`+commit[:len(commit)-(40-7)]+`" rel="nofollow">b6dd621</a></p>`)
+	test(sha[:39], `<p><a href="`+commit[:len(commit)-(40-39)]+`" rel="nofollow">b6dd6210ea</a></p>`)
 	test(commit, `<p><a href="`+commit+`" rel="nofollow">b6dd6210ea</a></p>`)
 	test(tree, `<p><a href="`+src+`" rel="nofollow">b6dd6210ea/src</a></p>`)
+	test("commit "+sha, `<p>commit <a href="`+commit+`" rel="nofollow">b6dd6210ea</a></p>`)
 }
 
 func TestRender_Images(t *testing.T) {
@@ -328,6 +368,22 @@ func TestRender_CrossReferences(t *testing.T) {
 	test(
 		"gogits/gogs#12345",
 		`<p><a href="`+URLJoin(AppURL, "gogits", "gogs", "issues", "12345")+`" rel="nofollow">gogits/gogs#12345</a></p>`)
+}
+
+func TestRender_FullIssueURLs(t *testing.T) {
+	setting.AppURL = AppURL
+	setting.AppSubURL = AppSubURL
+
+	test := func(input, expected string) {
+		result := RenderFullIssuePattern([]byte(input))
+		assert.Equal(t, expected, string(result))
+	}
+	test("Here is a link https://git.osgeo.org/gogs/postgis/postgis/pulls/6",
+		"Here is a link https://git.osgeo.org/gogs/postgis/postgis/pulls/6")
+	test("Look here http://localhost:3000/person/repo/issues/4",
+		`Look here <a href="http://localhost:3000/person/repo/issues/4">#4</a>`)
+	test("http://localhost:3000/person/repo/issues/4#issuecomment-1234",
+		`<a href="http://localhost:3000/person/repo/issues/4#issuecomment-1234">#4</a>`)
 }
 
 func TestRegExp_MentionPattern(t *testing.T) {
@@ -520,50 +576,6 @@ func TestRegExp_AnySHA1Pattern(t *testing.T) {
 	}
 }
 
-func TestRegExp_IssueFullPattern(t *testing.T) {
-	testCases := map[string][]string{
-		"https://github.com/gogits/gogs/pull/3244": {
-			"https",
-			"github.com/gogits/gogs/pull/",
-			"3244",
-			"",
-			"",
-		},
-		"https://github.com/gogits/gogs/issues/3247#issuecomment-231517079": {
-			"https",
-			"github.com/gogits/gogs/issues/",
-			"3247",
-			"#issuecomment-231517079",
-			"",
-		},
-		"https://try.gogs.io/gogs/gogs/issues/4#issue-685": {
-			"https",
-			"try.gogs.io/gogs/gogs/issues/",
-			"4",
-			"#issue-685",
-			"",
-		},
-		"https://youtrack.jetbrains.com/issue/JT-36485": {
-			"https",
-			"youtrack.jetbrains.com/issue/",
-			"JT-36485",
-			"",
-			"",
-		},
-		"https://youtrack.jetbrains.com/issue/JT-36485#comment=27-1508676": {
-			"https",
-			"youtrack.jetbrains.com/issue/",
-			"JT-36485",
-			"#comment=27-1508676",
-			"",
-		},
-	}
-
-	for k, v := range testCases {
-		assert.Equal(t, IssueFullPattern.FindStringSubmatch(k)[1:], v)
-	}
-}
-
 func TestMisc_IsMarkdownFile(t *testing.T) {
 	setting.Markdown.FileExtensions = []string{".md", ".markdown", ".mdown", ".mkd"}
 	trueTestCases := []string{
@@ -583,31 +595,6 @@ func TestMisc_IsMarkdownFile(t *testing.T) {
 	}
 	for _, testCase := range falseTestCases {
 		assert.False(t, IsMarkdownFile(testCase))
-	}
-}
-
-func TestMisc_IsReadmeFile(t *testing.T) {
-	trueTestCases := []string{
-		"readme",
-		"README",
-		"readME.mdown",
-		"README.md",
-	}
-	falseTestCases := []string{
-		"test.md",
-		"wow.MARKDOWN",
-		"LOL.mDoWn",
-		"test",
-		"abcdefg",
-		"abcdefghijklmnopqrstuvwxyz",
-		"test.md.test",
-	}
-
-	for _, testCase := range trueTestCases {
-		assert.True(t, IsReadmeFile(testCase))
-	}
-	for _, testCase := range falseTestCases {
-		assert.False(t, IsReadmeFile(testCase))
 	}
 }
 
@@ -632,7 +619,7 @@ var sameCases = []string{
 
 Ideas and codes
 
-- Bezier widget (by @r-lyeh) https://github.com/ocornut/imgui/issues/786
+- Bezier widget (by @r-lyeh) ` + AppURL + `ocornut/imgui/issues/786
 - Node graph editors https://github.com/ocornut/imgui/issues/306
 - [[Memory Editor|memory_editor_example]]
 - [[Plot var helper|plot_var_example]]`,
@@ -661,17 +648,17 @@ func testAnswers(baseURLContent, baseURLImages string) []string {
 		`<p>Wiki! Enjoy :)</p>
 
 <ul>
-<li><a href="` + baseURLContent + `Links" rel="nofollow">Links, Language bindings, Engine bindings</a></li>
-<li><a href="` + baseURLContent + `Tips" rel="nofollow">Tips</a></li>
+<li><a href="` + baseURLContent + `/Links" rel="nofollow">Links, Language bindings, Engine bindings</a></li>
+<li><a href="` + baseURLContent + `/Tips" rel="nofollow">Tips</a></li>
 </ul>
 
 <p>Ideas and codes</p>
 
 <ul>
-<li>Bezier widget (by <a href="` + AppURL + `r-lyeh" rel="nofollow">@r-lyeh</a>)<a href="https://github.com/ocornut/imgui/issues/786" rel="nofollow">#786</a></li>
-<li>Node graph editors<a href="https://github.com/ocornut/imgui/issues/306" rel="nofollow">#306</a></li>
-<li><a href="` + baseURLContent + `memory_editor_example" rel="nofollow">Memory Editor</a></li>
-<li><a href="` + baseURLContent + `plot_var_example" rel="nofollow">Plot var helper</a></li>
+<li>Bezier widget (by <a href="` + AppURL + `r-lyeh" rel="nofollow">@r-lyeh</a>) <a href="http://localhost:3000/ocornut/imgui/issues/786" rel="nofollow">#786</a></li>
+<li>Node graph editors https://github.com/ocornut/imgui/issues/306</li>
+<li><a href="` + baseURLContent + `/memory_editor_example" rel="nofollow">Memory Editor</a></li>
+<li><a href="` + baseURLContent + `/plot_var_example" rel="nofollow">Plot var helper</a></li>
 </ul>
 `,
 		`<h2>What is Wine Staging?</h2>
@@ -685,15 +672,15 @@ func testAnswers(baseURLContent, baseURLImages string) []string {
 <table>
 <thead>
 <tr>
-<th><a href="` + baseURLImages + `images/icon-install.png" rel="nofollow"><img src="` + baseURLImages + `images/icon-install.png" alt="images/icon-install.png" title="icon-install.png"/></a></th>
-<th><a href="` + baseURLContent + `Installation" rel="nofollow">Installation</a></th>
+<th><a href="` + baseURLImages + `/images/icon-install.png" rel="nofollow"><img src="` + baseURLImages + `/images/icon-install.png" alt="images/icon-install.png" title="icon-install.png"/></a></th>
+<th><a href="` + baseURLContent + `/Installation" rel="nofollow">Installation</a></th>
 </tr>
 </thead>
 
 <tbody>
 <tr>
-<td><a href="` + baseURLImages + `images/icon-usage.png" rel="nofollow"><img src="` + baseURLImages + `images/icon-usage.png" alt="images/icon-usage.png" title="icon-usage.png"/></a></td>
-<td><a href="` + baseURLContent + `Usage" rel="nofollow">Usage</a></td>
+<td><a href="` + baseURLImages + `/images/icon-usage.png" rel="nofollow"><img src="` + baseURLImages + `/images/icon-usage.png" alt="images/icon-usage.png" title="icon-usage.png"/></a></td>
+<td><a href="` + baseURLContent + `/Usage" rel="nofollow">Usage</a></td>
 </tr>
 </tbody>
 </table>
@@ -702,9 +689,9 @@ func testAnswers(baseURLContent, baseURLImages string) []string {
 
 <ol>
 <li><a href="https://github.com/libgdx/libgdx/wiki/Gradle-on-the-Commandline#packaging-for-the-desktop" rel="nofollow">Package your libGDX application</a>
-<a href="` + baseURLImages + `images/1.png" rel="nofollow"><img src="` + baseURLImages + `images/1.png" alt="images/1.png" title="1.png"/></a></li>
+<a href="` + baseURLImages + `/images/1.png" rel="nofollow"><img src="` + baseURLImages + `/images/1.png" alt="images/1.png" title="1.png"/></a></li>
 <li>Perform a test run by hitting the Run! button.
-<a href="` + baseURLImages + `images/2.png" rel="nofollow"><img src="` + baseURLImages + `images/2.png" alt="images/2.png" title="2.png"/></a></li>
+<a href="` + baseURLImages + `/images/2.png" rel="nofollow"><img src="` + baseURLImages + `/images/2.png" alt="images/2.png" title="2.png"/></a></li>
 </ol>
 `,
 	}

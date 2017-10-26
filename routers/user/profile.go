@@ -75,9 +75,17 @@ func Profile(ctx *context.Context) {
 		return
 	}
 
+	// Show OpenID URIs
+	openIDs, err := models.GetUserOpenIDs(ctxUser.ID)
+	if err != nil {
+		ctx.Handle(500, "GetUserOpenIDs", err)
+		return
+	}
+
 	ctx.Data["Title"] = ctxUser.DisplayName()
 	ctx.Data["PageIsUserProfile"] = true
 	ctx.Data["Owner"] = ctxUser
+	ctx.Data["OpenIDs"] = openIDs
 	showPrivate := ctx.IsSigned && (ctx.User.IsAdmin || ctx.User.ID == ctxUser.ID)
 
 	orgs, err := models.GetOrgsByUserID(ctxUser.ID, showPrivate)
@@ -130,7 +138,11 @@ func Profile(ctx *context.Context) {
 	ctx.Data["Keyword"] = keyword
 	switch tab {
 	case "activity":
-		retrieveFeeds(ctx, ctxUser, -1, 0, !showPrivate)
+		retrieveFeeds(ctx, models.GetFeedsOptions{RequestedUser: ctxUser,
+			IncludePrivate:  showPrivate,
+			OnlyPerformedBy: true,
+			IncludeDeleted:  false,
+		})
 		if ctx.Written() {
 			return
 		}
@@ -192,13 +204,14 @@ func Profile(ctx *context.Context) {
 			ctx.Data["Total"] = total
 		} else {
 			repos, count, err = models.SearchRepositoryByName(&models.SearchRepoOptions{
-				Keyword:   keyword,
-				OwnerID:   ctxUser.ID,
-				OrderBy:   orderBy,
-				Private:   showPrivate,
-				Page:      page,
-				IsProfile: true,
-				PageSize:  setting.UI.User.RepoPagingNum,
+				Keyword:     keyword,
+				OwnerID:     ctxUser.ID,
+				OrderBy:     orderBy,
+				Private:     showPrivate,
+				Page:        page,
+				IsProfile:   true,
+				PageSize:    setting.UI.User.RepoPagingNum,
+				Collaborate: true,
 			})
 			if err != nil {
 				ctx.Handle(500, "SearchRepositoryByName", err)
@@ -210,6 +223,8 @@ func Profile(ctx *context.Context) {
 			ctx.Data["Total"] = count
 		}
 	}
+
+	ctx.Data["ShowUserEmail"] = setting.UI.ShowUserEmail
 
 	ctx.HTML(200, tplProfile)
 }

@@ -24,6 +24,15 @@ type Team struct {
 	Members     []*User       `xorm:"-"`
 	NumRepos    int
 	NumMembers  int
+	UnitTypes   []UnitType `xorm:"json"`
+}
+
+// GetUnitTypes returns unit types the team owned, empty means all the unit types
+func (t *Team) GetUnitTypes() []UnitType {
+	if len(t.UnitTypes) == 0 {
+		return allRepUnitTypes
+	}
+	return t.UnitTypes
 }
 
 // IsOwnerTeam returns true if team is owner team.
@@ -110,7 +119,7 @@ func (t *Team) AddRepository(repo *Repository) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -139,18 +148,19 @@ func (t *Team) removeRepository(e Engine, repo *Repository, recalculate bool) (e
 		}
 	}
 
-	if err = t.getMembers(e); err != nil {
-		return fmt.Errorf("get team members: %v", err)
+	teamUsers, err := getTeamUsersByTeamID(e, t.ID)
+	if err != nil {
+		return fmt.Errorf("getTeamUsersByTeamID: %v", err)
 	}
-	for _, u := range t.Members {
-		has, err := hasAccess(e, u, repo, AccessModeRead)
+	for _, teamUser := range teamUsers {
+		has, err := hasAccess(e, teamUser.UID, repo, AccessModeRead)
 		if err != nil {
 			return err
 		} else if has {
 			continue
 		}
 
-		if err = watchRepo(e, u.ID, repo.ID, false); err != nil {
+		if err = watchRepo(e, teamUser.UID, repo.ID, false); err != nil {
 			return err
 		}
 	}
@@ -170,7 +180,7 @@ func (t *Team) RemoveRepository(repoID int64) error {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -180,6 +190,19 @@ func (t *Team) RemoveRepository(repoID int64) error {
 	}
 
 	return sess.Commit()
+}
+
+// UnitEnabled returns if the team has the given unit type enabled
+func (t *Team) UnitEnabled(tp UnitType) bool {
+	if len(t.UnitTypes) == 0 {
+		return true
+	}
+	for _, u := range t.UnitTypes {
+		if u == tp {
+			return true
+		}
+	}
+	return false
 }
 
 // IsUsableTeamName tests if a name could be as team name
@@ -207,7 +230,7 @@ func NewTeam(t *Team) (err error) {
 	if err != nil {
 		return err
 	} else if !has {
-		return ErrOrgNotExist
+		return ErrOrgNotExist{t.OrgID, ""}
 	}
 
 	t.LowerName = strings.ToLower(t.Name)
@@ -286,7 +309,7 @@ func UpdateTeam(t *Team, authChanged bool) (err error) {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -331,7 +354,7 @@ func DeleteTeam(t *Team) error {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err := sess.Begin(); err != nil {
 		return err
 	}
@@ -399,20 +422,25 @@ func IsTeamMember(orgID, teamID, userID int64) bool {
 	return isTeamMember(x, orgID, teamID, userID)
 }
 
-func getTeamMembers(e Engine, teamID int64) (_ []*User, err error) {
+func getTeamUsersByTeamID(e Engine, teamID int64) ([]*TeamUser, error) {
 	teamUsers := make([]*TeamUser, 0, 10)
-	if err = e.
+	return teamUsers, e.
 		Where("team_id=?", teamID).
-		Find(&teamUsers); err != nil {
+		Find(&teamUsers)
+}
+
+func getTeamMembers(e Engine, teamID int64) (_ []*User, err error) {
+	teamUsers, err := getTeamUsersByTeamID(e, teamID)
+	if err != nil {
 		return nil, fmt.Errorf("get team-users: %v", err)
 	}
-	members := make([]*User, 0, len(teamUsers))
-	for i := range teamUsers {
-		member := new(User)
-		if _, err = e.Id(teamUsers[i].UID).Get(member); err != nil {
-			return nil, fmt.Errorf("get user '%d': %v", teamUsers[i].UID, err)
+	members := make([]*User, len(teamUsers))
+	for i, teamUser := range teamUsers {
+		member, err := getUserByID(e, teamUser.UID)
+		if err != nil {
+			return nil, fmt.Errorf("get user '%d': %v", teamUser.UID, err)
 		}
-		members = append(members, member)
+		members[i] = member
 	}
 	return members, nil
 }
@@ -454,7 +482,7 @@ func AddTeamMember(team *Team, userID int64) error {
 	}
 
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err := sess.Begin(); err != nil {
 		return err
 	}
@@ -556,7 +584,7 @@ func removeTeamMember(e Engine, team *Team, userID int64) error {
 // RemoveTeamMember removes member from given team of given organization.
 func RemoveTeamMember(team *Team, userID int64) error {
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err := sess.Begin(); err != nil {
 		return err
 	}

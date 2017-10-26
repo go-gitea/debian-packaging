@@ -62,6 +62,11 @@ func newRequest(url, method string) *Request {
 	return &Request{url, &req, map[string]string{}, map[string]string{}, defaultSetting, &resp, nil}
 }
 
+// NewRequest returns *Request with specific method
+func NewRequest(url, method string) *Request {
+	return newRequest(url, method)
+}
+
 // Get returns *Request with GET method.
 func Get(url string) *Request {
 	return newRequest(url, "GET")
@@ -438,7 +443,7 @@ func (r *Request) ToXML(v interface{}) error {
 	return err
 }
 
-// Response executes request client gets response mannually.
+// Response executes request client gets response manually.
 func (r *Request) Response() (*http.Response, error) {
 	return r.getResponse()
 }

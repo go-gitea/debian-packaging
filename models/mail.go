@@ -47,8 +47,8 @@ func SendTestMail(email string) error {
 func SendUserMail(c *macaron.Context, u *User, tpl base.TplName, code, subject, info string) {
 	data := map[string]interface{}{
 		"Username":          u.DisplayName(),
-		"ActiveCodeLives":   setting.Service.ActiveCodeLives / 60,
-		"ResetPwdCodeLives": setting.Service.ResetPwdCodeLives / 60,
+		"ActiveCodeLives":   base.MinutesToFriendly(setting.Service.ActiveCodeLives, c.Locale.Language()),
+		"ResetPwdCodeLives": base.MinutesToFriendly(setting.Service.ResetPwdCodeLives, c.Locale.Language()),
 		"Code":              code,
 	}
 
@@ -65,7 +65,7 @@ func SendUserMail(c *macaron.Context, u *User, tpl base.TplName, code, subject, 
 	mailer.SendAsync(msg)
 }
 
-// SendActivateAccountMail sends an activation mail to the user
+// SendActivateAccountMail sends an activation mail to the user (new user registration)
 func SendActivateAccountMail(c *macaron.Context, u *User) {
 	SendUserMail(c, u, mailAuthActivate, u.GenerateActivateCode(), c.Tr("mail.activate_account"), "activate account")
 }
@@ -75,11 +75,11 @@ func SendResetPasswordMail(c *macaron.Context, u *User) {
 	SendUserMail(c, u, mailAuthResetPassword, u.GenerateActivateCode(), c.Tr("mail.reset_password"), "reset password")
 }
 
-// SendActivateEmailMail sends confirmation email.
+// SendActivateEmailMail sends confirmation email to confirm new email address
 func SendActivateEmailMail(c *macaron.Context, u *User, email *EmailAddress) {
 	data := map[string]interface{}{
 		"Username":        u.DisplayName(),
-		"ActiveCodeLives": setting.Service.ActiveCodeLives / 60,
+		"ActiveCodeLives": base.MinutesToFriendly(setting.Service.ActiveCodeLives, c.Locale.Language()),
 		"Code":            u.GenerateEmailActivateCode(email.Email),
 		"Email":           email.Email,
 	}
@@ -148,10 +148,16 @@ func composeTplData(subject, body, link string) map[string]interface{} {
 	return data
 }
 
-func composeIssueMessage(issue *Issue, doer *User, tplName base.TplName, tos []string, info string) *mailer.Message {
+func composeIssueCommentMessage(issue *Issue, doer *User, comment *Comment, tplName base.TplName, tos []string, info string) *mailer.Message {
 	subject := issue.mailSubject()
 	body := string(markdown.RenderString(issue.Content, issue.Repo.HTMLURL(), issue.Repo.ComposeMetas()))
-	data := composeTplData(subject, body, issue.HTMLURL())
+
+	data := make(map[string]interface{}, 10)
+	if comment != nil {
+		data = composeTplData(subject, body, issue.HTMLURL()+"#"+comment.HashTag())
+	} else {
+		data = composeTplData(subject, body, issue.HTMLURL())
+	}
 	data["Doer"] = doer
 
 	var content bytes.Buffer
@@ -166,18 +172,18 @@ func composeIssueMessage(issue *Issue, doer *User, tplName base.TplName, tos []s
 }
 
 // SendIssueCommentMail composes and sends issue comment emails to target receivers.
-func SendIssueCommentMail(issue *Issue, doer *User, tos []string) {
+func SendIssueCommentMail(issue *Issue, doer *User, comment *Comment, tos []string) {
 	if len(tos) == 0 {
 		return
 	}
 
-	mailer.SendAsync(composeIssueMessage(issue, doer, mailIssueComment, tos, "issue comment"))
+	mailer.SendAsync(composeIssueCommentMessage(issue, doer, comment, mailIssueComment, tos, "issue comment"))
 }
 
 // SendIssueMentionMail composes and sends issue mention emails to target receivers.
-func SendIssueMentionMail(issue *Issue, doer *User, tos []string) {
+func SendIssueMentionMail(issue *Issue, doer *User, comment *Comment, tos []string) {
 	if len(tos) == 0 {
 		return
 	}
-	mailer.SendAsync(composeIssueMessage(issue, doer, mailIssueMention, tos, "issue mention"))
+	mailer.SendAsync(composeIssueCommentMessage(issue, doer, comment, mailIssueMention, tos, "issue mention"))
 }

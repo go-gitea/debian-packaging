@@ -13,6 +13,7 @@ import (
 	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/setting"
 	"code.gitea.io/gitea/modules/util"
+
 	"github.com/blevesearch/bleve"
 	"github.com/blevesearch/bleve/analysis/analyzer/simple"
 	"github.com/blevesearch/bleve/search/query"
@@ -132,7 +133,6 @@ func populateIssueIndexer() error {
 				RepoID:   repo.ID,
 				IsClosed: util.OptionalBoolNone,
 				IsPull:   util.OptionalBoolNone,
-				Page:     -1, // do not page
 			})
 			if err != nil {
 				return fmt.Errorf("Issues: %v", err)

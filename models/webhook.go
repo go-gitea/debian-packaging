@@ -1,4 +1,5 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
+// Copyright 2017 The Gitea Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -266,7 +267,7 @@ func UpdateWebhook(w *Webhook) error {
 // ID must be specified and do not assign unnecessary fields.
 func deleteWebhook(bean *Webhook) (err error) {
 	sess := x.NewSession()
-	defer sessionRelease(sess)
+	defer sess.Close()
 	if err = sess.Begin(); err != nil {
 		return err
 	}
@@ -312,9 +313,11 @@ type HookTaskType int
 const (
 	GOGS HookTaskType = iota + 1
 	SLACK
+	GITEA
 )
 
 var hookTaskTypes = map[string]HookTaskType{
+	"gitea": GITEA,
 	"gogs":  GOGS,
 	"slack": SLACK,
 }
@@ -327,6 +330,8 @@ func ToHookTaskType(name string) HookTaskType {
 // Name returns the name of an hook task type
 func (t HookTaskType) Name() string {
 	switch t {
+	case GITEA:
+		return "gitea"
 	case GOGS:
 		return "gogs"
 	case SLACK:
@@ -475,11 +480,11 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 	// check if repo belongs to org and append additional webhooks
 	if repo.MustOwner().IsOrganization() {
 		// get hooks for org
-		orgws, err := GetActiveWebhooksByOrgID(repo.OwnerID)
+		orgHooks, err := GetActiveWebhooksByOrgID(repo.OwnerID)
 		if err != nil {
 			return fmt.Errorf("GetActiveWebhooksByOrgID: %v", err)
 		}
-		ws = append(ws, orgws...)
+		ws = append(ws, orgHooks...)
 	}
 
 	if len(ws) == 0 {
@@ -503,7 +508,7 @@ func PrepareWebhooks(repo *Repository, event HookEventType, p api.Payloader) err
 			}
 		}
 
-		// Use separate objects so modifications won't be made on payload on non-Gogs type hooks.
+		// Use separate objects so modifications won't be made on payload on non-Gogs/Gitea type hooks.
 		switch w.HookTaskType {
 		case SLACK:
 			payloader, err = GetSlackPayload(p, event, w.Meta)
@@ -536,6 +541,8 @@ func (t *HookTask) deliver() {
 
 	timeout := time.Duration(setting.Webhook.DeliverTimeout) * time.Second
 	req := httplib.Post(t.URL).SetTimeout(timeout, timeout).
+		Header("X-Gitea-Delivery", t.UUID).
+		Header("X-Gitea-Event", string(t.EventType)).
 		Header("X-Gogs-Delivery", t.UUID).
 		Header("X-Gogs-Event", string(t.EventType)).
 		Header("X-GitHub-Delivery", t.UUID).
@@ -612,18 +619,16 @@ func (t *HookTask) deliver() {
 // TODO: shoot more hooks at same time.
 func DeliverHooks() {
 	tasks := make([]*HookTask, 0, 10)
-	x.
-		Where("is_delivered=?", false).
-		Iterate(new(HookTask),
-			func(idx int, bean interface{}) error {
-				t := bean.(*HookTask)
-				t.deliver()
-				tasks = append(tasks, t)
-				return nil
-			})
+	err := x.Where("is_delivered=?", false).Find(&tasks)
+	if err != nil {
+		log.Error(4, "DeliverHooks: %v", err)
+		return
+	}
 
 	// Update hook task status.
 	for _, t := range tasks {
+		t.deliver()
+
 		if err := UpdateHookTask(t); err != nil {
 			log.Error(4, "UpdateHookTask [%d]: %v", t.ID, err)
 		}

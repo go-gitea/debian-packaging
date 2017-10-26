@@ -67,6 +67,10 @@ func checkContextUser(ctx *context.Context, uid int64) *models.User {
 
 // Create render creating repository page
 func Create(ctx *context.Context) {
+	if !ctx.User.CanCreateRepo() {
+		ctx.RenderWithErr(ctx.Tr("repo.form.reach_limit_of_creation", ctx.User.MaxCreationLimit()), tplCreate, nil)
+	}
+
 	ctx.Data["Title"] = ctx.Tr("new_repo")
 
 	// Give default value for template to render.
@@ -89,7 +93,7 @@ func Create(ctx *context.Context) {
 func handleCreateError(ctx *context.Context, owner *models.User, err error, name string, tpl base.TplName, form interface{}) {
 	switch {
 	case models.IsErrReachLimitOfRepo(err):
-		ctx.RenderWithErr(ctx.Tr("repo.form.reach_limit_of_creation", owner.RepoCreationNum()), tpl, form)
+		ctx.RenderWithErr(ctx.Tr("repo.form.reach_limit_of_creation", owner.MaxCreationLimit()), tpl, form)
 	case models.IsErrRepoAlreadyExist(err):
 		ctx.Data["Err_RepoName"] = true
 		ctx.RenderWithErr(ctx.Tr("form.repo_name_been_taken"), tpl, form)
@@ -153,6 +157,7 @@ func Migrate(ctx *context.Context) {
 	ctx.Data["private"] = ctx.User.LastRepoVisibility
 	ctx.Data["IsForcedPrivate"] = setting.Repository.ForcePrivate
 	ctx.Data["mirror"] = ctx.Query("mirror") == "1"
+	ctx.Data["LFSActive"] = setting.LFS.StartServer
 
 	ctxUser := checkContextUser(ctx, ctx.QueryInt64("org"))
 	if ctx.Written() {

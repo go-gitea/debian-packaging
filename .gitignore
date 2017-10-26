@@ -26,7 +26,7 @@ _testmain.go
 *.test
 *.prof
 
-coverage.out
+*coverage.out
 
 /modules/options/bindata.go
 /modules/public/bindata.go
@@ -36,6 +36,7 @@ coverage.out
 *.log
 
 /gitea
+/integrations.test
 
 /bin
 /dist
@@ -44,3 +45,4 @@ coverage.out
 /indexers
 /log
 /public/img/avatar
+/integrations/gitea-integration

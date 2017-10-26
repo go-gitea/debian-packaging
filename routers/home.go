@@ -20,6 +20,8 @@ import (
 const (
 	// tplHome home page template
 	tplHome base.TplName = "home"
+	// tplSwagger swagger page template
+	tplSwagger base.TplName = "swagger"
 	// tplExploreRepos explore repositories page template
 	tplExploreRepos base.TplName = "explore/repos"
 	// tplExploreUsers explore users page template
@@ -49,6 +51,11 @@ func Home(ctx *context.Context) {
 
 	ctx.Data["PageIsHome"] = true
 	ctx.HTML(200, tplHome)
+}
+
+// Swagger render swagger-ui page
+func Swagger(ctx *context.Context) {
+	ctx.HTML(200, tplSwagger)
 }
 
 // RepoSearchOptions when calling search repositories
@@ -94,6 +101,10 @@ func RenderRepoSearch(ctx *context.Context, opts *RepoSearchOptions) {
 		orderBy = "name DESC"
 	case "alphabetically":
 		orderBy = "name ASC"
+	case "reversesize":
+		orderBy = "size DESC"
+	case "size":
+		orderBy = "size ASC"
 	default:
 		orderBy = "created_unix DESC"
 	}
@@ -101,11 +112,12 @@ func RenderRepoSearch(ctx *context.Context, opts *RepoSearchOptions) {
 	keyword := strings.Trim(ctx.Query("q"), " ")
 	if len(keyword) == 0 {
 		repos, count, err = opts.Ranger(&models.SearchRepoOptions{
-			Page:     page,
-			PageSize: opts.PageSize,
-			Searcher: ctx.User,
-			OrderBy:  orderBy,
-			Private:  opts.Private,
+			Page:        page,
+			PageSize:    opts.PageSize,
+			Searcher:    ctx.User,
+			OrderBy:     orderBy,
+			Private:     opts.Private,
+			Collaborate: true,
 		})
 		if err != nil {
 			ctx.Handle(500, "opts.Ranger", err)
@@ -114,12 +126,13 @@ func RenderRepoSearch(ctx *context.Context, opts *RepoSearchOptions) {
 	} else {
 		if isKeywordValid(keyword) {
 			repos, count, err = models.SearchRepositoryByName(&models.SearchRepoOptions{
-				Keyword:  keyword,
-				OrderBy:  orderBy,
-				Private:  opts.Private,
-				Page:     page,
-				PageSize: opts.PageSize,
-				Searcher: ctx.User,
+				Keyword:     keyword,
+				OrderBy:     orderBy,
+				Private:     opts.Private,
+				Page:        page,
+				PageSize:    opts.PageSize,
+				Searcher:    ctx.User,
+				Collaborate: true,
 			})
 			if err != nil {
 				ctx.Handle(500, "SearchRepositoryByName", err)

@@ -16,6 +16,7 @@ import (
 
 	"code.gitea.io/gitea/models"
 	"code.gitea.io/gitea/modules/setting"
+
 	"github.com/Unknwon/cae/zip"
 	"github.com/Unknwon/com"
 	"github.com/urfave/cli"
@@ -72,6 +73,11 @@ func runDump(ctx *cli.Context) error {
 		log.Fatalf("Failed to create tmp work directory: %v", err)
 	}
 	log.Printf("Creating tmp work dir: %s", TmpWorkDir)
+
+	// work-around #1103
+	if os.Getenv("TMPDIR") == "" {
+		os.Setenv("TMPDIR", TmpWorkDir)
+	}
 
 	reposDump := path.Join(TmpWorkDir, "gitea-repo.zip")
 	dbDump := path.Join(TmpWorkDir, "gitea-db.sql")

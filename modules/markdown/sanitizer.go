@@ -38,15 +38,12 @@ func NewSanitizer() {
 
 		// Custom URL-Schemes
 		sanitizer.policy.AllowURLSchemes(setting.Markdown.CustomURLSchemes...)
-
 	})
 }
 
 // Sanitize takes a string that contains a HTML fragment or document and applies policy whitelist.
 func Sanitize(s string) string {
-	if sanitizer.policy == nil {
-		NewSanitizer()
-	}
+	NewSanitizer()
 	return sanitizer.policy.Sanitize(s)
 }
 
@@ -56,8 +53,6 @@ func SanitizeBytes(b []byte) []byte {
 		// nothing to sanitize
 		return b
 	}
-	if sanitizer.policy == nil {
-		NewSanitizer()
-	}
+	NewSanitizer()
 	return sanitizer.policy.SanitizeBytes(b)
 }

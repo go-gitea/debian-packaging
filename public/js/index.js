@@ -87,6 +87,20 @@ function initEditForm() {
 }
 
 
+function updateIssuesMeta(url, action, issueIds, elementId, afterSuccess) {
+    $.ajax({
+        type: "POST",
+        url: url,
+        data: {
+            "_csrf": csrf,
+            "action": action,
+            "issue_ids": issueIds,
+            "id": elementId
+        },
+        success: afterSuccess
+    })
+}
+
 function initCommentForm() {
     if ($('.comment.form').length == 0) {
         return
@@ -100,14 +114,6 @@ function initCommentForm() {
     var $labelMenu = $('.select-label .menu');
     var hasLabelUpdateAction = $labelMenu.data('action') == 'update';
 
-    function updateIssueMeta(url, action, id) {
-        $.post(url, {
-            "_csrf": csrf,
-            "action": action,
-            "id": id
-        });
-    }
-
     $('.select-label').dropdown('setting', 'onHide', function(){
         if (hasLabelUpdateAction) {
             location.reload();
@@ -119,13 +125,23 @@ function initCommentForm() {
             $(this).removeClass('checked');
             $(this).find('.octicon').removeClass('octicon-check');
             if (hasLabelUpdateAction) {
-                updateIssueMeta($labelMenu.data('update-url'), "detach", $(this).data('id'));
+                updateIssuesMeta(
+                    $labelMenu.data('update-url'),
+                    "detach",
+                    $labelMenu.data('issue-id'),
+                    $(this).data('id')
+                );
             }
         } else {
             $(this).addClass('checked');
             $(this).find('.octicon').addClass('octicon-check');
             if (hasLabelUpdateAction) {
-                updateIssueMeta($labelMenu.data('update-url'), "attach", $(this).data('id'));
+                updateIssuesMeta(
+                    $labelMenu.data('update-url'),
+                    "attach",
+                    $labelMenu.data('issue-id'),
+                    $(this).data('id')
+                );
             }
         }
 
@@ -148,7 +164,12 @@ function initCommentForm() {
     });
     $labelMenu.find('.no-select.item').click(function () {
         if (hasLabelUpdateAction) {
-            updateIssueMeta($labelMenu.data('update-url'), "clear", '');
+            updateIssuesMeta(
+                $labelMenu.data('update-url'),
+                "clear",
+                $labelMenu.data('issue-id'),
+                ""
+            );
         }
 
         $(this).parent().find('.item').each(function () {
@@ -168,12 +189,6 @@ function initCommentForm() {
         var $list = $('.ui' + select_id + '.list');
         var hasUpdateAction = $menu.data('action') == 'update';
 
-        $(select_id).dropdown('setting', 'onHide', function(){
-            if (hasUpdateAction) {
-                location.reload();
-            }
-        });
-
         $menu.find('.item:not(.no-select)').click(function () {
             $(this).parent().find('.item').each(function () {
                 $(this).removeClass('selected active')
@@ -181,7 +196,13 @@ function initCommentForm() {
 
             $(this).addClass('selected active');
             if (hasUpdateAction) {
-                updateIssueMeta($menu.data('update-url'), '', $(this).data('id'));
+                updateIssuesMeta(
+                    $menu.data('update-url'),
+                    "",
+                    $menu.data('issue-id'),
+                    $(this).data('id'),
+                    function() { location.reload(); }
+                );
             }
             switch (input_id) {
                 case '#milestone_id':
@@ -202,7 +223,13 @@ function initCommentForm() {
             });
 
             if (hasUpdateAction) {
-                updateIssueMeta($menu.data('update-url'), '', '');
+                updateIssuesMeta(
+                    $menu.data('update-url'),
+                    "",
+                    $menu.data('issue-id'),
+                    $(this).data('id'),
+                    function() { location.reload(); }
+                );
             }
 
             $list.find('.selected').html('');
@@ -284,9 +311,22 @@ function initInstall() {
             $('#offline-mode').checkbox('uncheck');
         }
     });
+    $('#enable-openid-signin input').change(function () {
+        if ($(this).is(':checked')) {
+            if ( $('#disable-registration input').is(':checked') ) {
+            } else {
+                $('#enable-openid-signup').checkbox('check');
+            }
+        } else {
+            $('#enable-openid-signup').checkbox('uncheck');
+        }
+    });
     $('#disable-registration input').change(function () {
         if ($(this).is(':checked')) {
             $('#enable-captcha').checkbox('uncheck');
+            $('#enable-openid-signup').checkbox('uncheck');
+        } else {
+            $('#enable-openid-signup').checkbox('check');
         }
     });
     $('#enable-captcha input').change(function () {
@@ -585,7 +625,7 @@ function initProtectedBranch() {
         var $this = $(this);
         $.post($this.data('url'), {
                 "_csrf": csrf,
-                "canPush": true,
+                "canPush": false,
                 "branchName": $this.val(),
             },
             function (data) {
@@ -602,7 +642,7 @@ function initProtectedBranch() {
         var $this = $(this);
         $.post($this.data('url'), {
                 "_csrf": csrf,
-                "canPush": false,
+                "canPush": true,
                 "branchName": $this.data('val'),
             },
             function (data) {
@@ -627,6 +667,18 @@ function initRepositoryCollaboration() {
             "uid": $menu.data('uid'),
             "mode": $(this).data('value')
         })
+    });
+}
+
+function initTeamSettings() {
+    // Change team access mode
+    $('.organization.new.team input[name=permission]').change(function () {
+        var val = $('input[name=permission]:checked', '.organization.new.team').val()
+        if (val === 'admin') {
+            $('.organization.new.team .team-units').hide();
+        } else {
+            $('.organization.new.team .team-units').show();
+        }
     });
 }
 
@@ -1016,6 +1068,56 @@ function initAdmin() {
         }
     }
 
+    function onOAuth2Change() {
+        $('.open_id_connect_auto_discovery_url, .oauth2_use_custom_url').hide();
+        $('.open_id_connect_auto_discovery_url input[required]').removeAttr('required');
+
+        var provider = $('#oauth2_provider').val();
+        switch (provider) {
+            case 'github':
+            case 'gitlab':
+                $('.oauth2_use_custom_url').show();
+                break;
+            case 'openidConnect':
+                $('.open_id_connect_auto_discovery_url input').attr('required', 'required');
+                $('.open_id_connect_auto_discovery_url').show();
+                break;
+        }
+        onOAuth2UseCustomURLChange();
+    }
+
+    function onOAuth2UseCustomURLChange() {
+        var provider = $('#oauth2_provider').val();
+        $('.oauth2_use_custom_url_field').hide();
+        $('.oauth2_use_custom_url_field input[required]').removeAttr('required');
+
+        if ($('#oauth2_use_custom_url').is(':checked')) {
+            if (!$('#oauth2_token_url').val()) {
+                $('#oauth2_token_url').val($('#' + provider + '_token_url').val());
+            }
+            if (!$('#oauth2_auth_url').val()) {
+                $('#oauth2_auth_url').val($('#' + provider + '_auth_url').val());
+            }
+            if (!$('#oauth2_profile_url').val()) {
+                $('#oauth2_profile_url').val($('#' + provider + '_profile_url').val());
+            }
+            if (!$('#oauth2_email_url').val()) {
+                $('#oauth2_email_url').val($('#' + provider + '_email_url').val());
+            }
+            switch (provider) {
+                case 'github':
+                    $('.oauth2_token_url input, .oauth2_auth_url input, .oauth2_profile_url input, .oauth2_email_url input').attr('required', 'required');
+                    $('.oauth2_token_url, .oauth2_auth_url, .oauth2_profile_url, .oauth2_email_url').show();
+                    break;
+                case 'gitlab':
+                    $('.oauth2_token_url input, .oauth2_auth_url input, .oauth2_profile_url input').attr('required', 'required');
+                    $('.oauth2_token_url, .oauth2_auth_url, .oauth2_profile_url').show();
+                    $('#oauth2_email_url').val('');
+                    break;
+            }
+        }
+    }
+
     // New authentication
     if ($('.admin.new.authentication').length > 0) {
         $('#auth_type').change(function () {
@@ -1044,22 +1146,28 @@ function initAdmin() {
                     break;
                 case '6':     // OAuth2
                     $('.oauth2').show();
-                    $('.oauth2 input').attr('required', 'required');
+                    $('.oauth2 div.required:not(.oauth2_use_custom_url,.oauth2_use_custom_url_field,.open_id_connect_auto_discovery_url) input').attr('required', 'required');
+                    onOAuth2Change();
                     break;
             }
-
             if (authType == '2' || authType == '5') {
                 onSecurityProtocolChange()
             }
         });
         $('#auth_type').change();
-        $('#security_protocol').change(onSecurityProtocolChange)
+        $('#security_protocol').change(onSecurityProtocolChange);
+        $('#oauth2_provider').change(onOAuth2Change);
+        $('#oauth2_use_custom_url').change(onOAuth2UseCustomURLChange);
     }
     // Edit authentication
     if ($('.admin.edit.authentication').length > 0) {
         var authType = $('#auth_type').val();
         if (authType == '2' || authType == '5') {
             $('#security_protocol').change(onSecurityProtocolChange);
+        } else if (authType == '6') {
+            $('#oauth2_provider').change(onOAuth2Change);
+            $('#oauth2_use_custom_url').change(onOAuth2UseCustomURLChange);
+            onOAuth2Change();
         }
     }
 
@@ -1348,7 +1456,7 @@ $(document).ready(function () {
 
     // Emojify
     emojify.setConfig({
-        img_dir: suburl + '/img/emoji',
+        img_dir: suburl + '/plugins/emojify/images',
         ignore_emoticons: true
     });
     var hasEmoji = document.getElementsByClassName('has-emoji');
@@ -1377,7 +1485,11 @@ $(document).ready(function () {
     // Helpers.
     $('.delete-button').click(function () {
         var $this = $(this);
-        $('.delete.modal').modal({
+        var filter = "";
+        if ($this.attr("id")) {
+          filter += "#"+$this.attr("id")
+        }
+        $('.delete.modal'+filter).modal({
             closable: false,
             onApprove: function () {
                 if ($this.data('type') == "form") {
@@ -1431,6 +1543,29 @@ $(document).ready(function () {
     });
     $('.markdown').autolink();
 
+    $('.issue-checkbox').click(function() {
+        var numChecked = $('.issue-checkbox').children('input:checked').length;
+        if (numChecked > 0) {
+            $('.issue-filters').hide();
+            $('.issue-actions').show();
+        } else {
+            $('.issue-filters').show();
+            $('.issue-actions').hide();
+        }
+    });
+
+    $('.issue-action').click(function () {
+        var action = this.dataset.action
+        var elementId = this.dataset.elementId
+        var issueIDs = $('.issue-checkbox').children('input:checked').map(function() {
+            return this.dataset.issueId;
+        }).get().join();
+        var url = this.dataset.url
+        updateIssuesMeta(url, action, issueIDs, elementId, function() {
+            location.reload();
+        });
+    });
+
     buttonsClickOnEnter();
     searchUsers();
     searchRepositories();
@@ -1446,6 +1581,8 @@ $(document).ready(function () {
     initWebhook();
     initAdmin();
     initCodeView();
+    initVueApp();
+    initTeamSettings();
 
     // Repo clone url.
     if ($('#repo-clone-url').length > 0) {
@@ -1521,15 +1658,6 @@ $(function () {
     if ($('.user.signin').length > 0) return;
     $('form').areYouSure();
 
-    $("#search_repo").on('change paste keyup',function(){
-        var value = $(this).val();
-        if(!value){
-            $('.list-search-style').html('');
-        } else{
-            $('.list-search-style').html('.search-list li:not([data-title*="' + value + '"]) {display: none;}');
-        }
-    });
-
     // Parse SSH Key
     $("#ssh-key-content").on('change paste keyup',function(){
         var arrays = $(this).val().split(" ");
@@ -1539,3 +1667,145 @@ $(function () {
         }
     });
 });
+
+function initVueComponents(){
+    var vueDelimeters = ['${', '}'];
+
+    Vue.component('repo-search', {
+        delimiters: vueDelimeters,
+
+        props: {
+            searchLimit: {
+                type: Number,
+                default: 10
+            },
+            suburl: {
+                type: String,
+                required: true
+            },
+            uid: {
+                type: Number,
+                required: true
+            },
+            organizations: {
+                type: Array,
+                default: []
+            },
+            isOrganization: {
+                type: Boolean,
+                default: true
+            },
+            canCreateOrganization: {
+                type: Boolean,
+                default: false
+            },
+            organizationsTotalCount: {
+                type: Number,
+                default: 0
+            },
+            moreReposLink: {
+                type: String,
+                default: ''
+            }
+        },
+
+        data: function() {
+            return {
+                tab: 'repos',
+                repos: [],
+                reposTotalCount: 0,
+                reposFilter: 'all',
+                searchQuery: '',
+                isLoading: false
+            }
+        },
+
+        mounted: function() {
+            this.searchRepos();
+
+            var self = this;
+            Vue.nextTick(function() {
+                self.$refs.search.focus();
+            });
+        },
+
+        methods: {
+            changeTab: function(t) {
+                this.tab = t;
+            },
+
+            changeReposFilter: function(filter) {
+                this.reposFilter = filter;
+            },
+
+            showRepo: function(repo, filter) {
+                switch (filter) {
+                    case 'sources':
+                        return repo.owner.id == this.uid && !repo.mirror && !repo.fork;
+                    case 'forks':
+                        return repo.owner.id == this.uid && !repo.mirror && repo.fork;
+                    case 'mirrors':
+                        return repo.mirror;
+                    case 'collaborative':
+                        return repo.owner.id != this.uid;
+                    default:
+                        return true;
+                }
+            },
+
+            searchRepos: function() {
+                var self = this;
+                this.isLoading = true;
+                var searchedQuery = this.searchQuery;
+                $.getJSON(this.searchURL(), function(result, textStatus, request) {
+                    if (searchedQuery == self.searchQuery) {
+                        self.repos = result.data;
+                        if (searchedQuery == "") {
+                            self.reposTotalCount = request.getResponseHeader('X-Total-Count');
+                        }
+                    }
+                }).always(function() {
+                    if (searchedQuery == self.searchQuery) {
+                        self.isLoading = false;
+                    }
+                });
+            },
+
+            searchURL: function() {
+                return this.suburl + '/api/v1/repos/search?uid=' + this.uid + '&q=' + this.searchQuery + '&limit=' + this.searchLimit;
+            },
+
+            repoClass: function(repo) {
+                if (repo.fork) {
+                    return 'octicon octicon-repo-forked';
+                } else if (repo.mirror) {
+                    return 'octicon octicon-repo-clone';
+                } else if (repo.private) {
+                    return 'octicon octicon-lock';
+                } else {
+                    return 'octicon octicon-repo';
+                }
+            }
+        }
+    })
+}
+
+function initVueApp() {
+    var el = document.getElementById('app');
+    if (!el) {
+        return;
+    }
+
+    initVueComponents();
+
+    new Vue({
+        delimiters: ['${', '}'],
+        el: el,
+
+        data: {
+            searchLimit: document.querySelector('meta[name=_search_limit]').content,
+            suburl: document.querySelector('meta[name=_suburl]').content,
+            uid: document.querySelector('meta[name=_context_uid]').content,
+        },
+    });
+}

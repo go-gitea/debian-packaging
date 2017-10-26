@@ -1,4 +1,5 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
+// Copyright 2017 The Gitea Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -33,7 +34,7 @@ type CreateRepoForm struct {
 	Readme      string
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *CreateRepoForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -50,7 +51,7 @@ type MigrateRepoForm struct {
 	Description  string `json:"description" binding:"MaxSize(255)"`
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *MigrateRepoForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -87,8 +88,8 @@ func (f MigrateRepoForm) ParseRemoteAddr(user *models.User) (string, error) {
 type RepoSettingForm struct {
 	RepoName      string `binding:"Required;AlphaDashDot;MaxSize(100)"`
 	Description   string `binding:"MaxSize(255)"`
-	Website       string `binding:"Url;MaxSize(255)"`
-	Interval      int
+	Website       string `binding:"ValidUrl;MaxSize(255)"`
+	Interval      string
 	MirrorAddress string
 	Private       bool
 	EnablePrune   bool
@@ -105,7 +106,7 @@ type RepoSettingForm struct {
 	EnablePulls           bool
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -143,20 +144,33 @@ func (f WebhookForm) ChooseEvents() bool {
 
 // NewWebhookForm form for creating web hook
 type NewWebhookForm struct {
-	PayloadURL  string `binding:"Required;Url"`
+	PayloadURL  string `binding:"Required;ValidUrl"`
 	ContentType int    `binding:"Required"`
 	Secret      string
 	WebhookForm
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *NewWebhookForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+// NewGogshookForm form for creating gogs hook
+type NewGogshookForm struct {
+	PayloadURL  string `binding:"Required;ValidUrl"`
+	ContentType int    `binding:"Required"`
+	Secret      string
+	WebhookForm
+}
+
+// Validate validates the fields
+func (f *NewGogshookForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
 // NewSlackHookForm form for creating slack hook
 type NewSlackHookForm struct {
-	PayloadURL string `binding:"Required;Url"`
+	PayloadURL string `binding:"Required;ValidUrl"`
 	Channel    string `binding:"Required"`
 	Username   string
 	IconURL    string
@@ -164,7 +178,7 @@ type NewSlackHookForm struct {
 	WebhookForm
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *NewSlackHookForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -186,7 +200,7 @@ type CreateIssueForm struct {
 	Files       []string
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *CreateIssueForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -198,7 +212,7 @@ type CreateCommentForm struct {
 	Files   []string
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *CreateCommentForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -217,7 +231,7 @@ type CreateMilestoneForm struct {
 	Deadline string
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *CreateMilestoneForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -236,7 +250,7 @@ type CreateLabelForm struct {
 	Color string `binding:"Required;Size(7)" locale:"repo.issues.label_color"`
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *CreateLabelForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -246,7 +260,7 @@ type InitializeLabelsForm struct {
 	TemplateName string `binding:"Required"`
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *InitializeLabelsForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -269,7 +283,7 @@ type NewReleaseForm struct {
 	Files      []string
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *NewReleaseForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -283,7 +297,7 @@ type EditReleaseForm struct {
 	Files      []string
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *EditReleaseForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -303,7 +317,7 @@ type NewWikiForm struct {
 	Message  string
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 // FIXME: use code generation to generate this method.
 func (f *NewWikiForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
@@ -323,11 +337,11 @@ type EditRepoFileForm struct {
 	CommitSummary string `binding:"MaxSize(100)"`
 	CommitMessage string
 	CommitChoice  string `binding:"Required;MaxSize(50)"`
-	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
+	NewBranchName string `binding:"GitRefName;MaxSize(100)"`
 	LastCommit    string
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *EditRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -337,7 +351,7 @@ type EditPreviewDiffForm struct {
 	Content string
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *EditPreviewDiffForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -356,11 +370,11 @@ type UploadRepoFileForm struct {
 	CommitSummary string `binding:"MaxSize(100)"`
 	CommitMessage string
 	CommitChoice  string `binding:"Required;MaxSize(50)"`
-	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
+	NewBranchName string `binding:"GitRefName;MaxSize(100)"`
 	Files         []string
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *UploadRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -370,7 +384,7 @@ type RemoveUploadFileForm struct {
 	File string `binding:"Required;MaxSize(50)"`
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *RemoveUploadFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
@@ -387,10 +401,10 @@ type DeleteRepoFileForm struct {
 	CommitSummary string `binding:"MaxSize(100)"`
 	CommitMessage string
 	CommitChoice  string `binding:"Required;MaxSize(50)"`
-	NewBranchName string `binding:"AlphaDashDot;MaxSize(100)"`
+	NewBranchName string `binding:"GitRefName;MaxSize(100)"`
 }
 
-// Validate valideates the fields
+// Validate validates the fields
 func (f *DeleteRepoFileForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
