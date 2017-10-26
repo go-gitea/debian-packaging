@@ -1,8 +1,7 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: gitea
 Source: https://github.com/go-gitea/gitea
-Files-Excluded: public/css/themes/github
-                public/vendor
+Files-Excluded: public/vendor
                 vendor
 
 Files: *
