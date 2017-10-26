@@ -19,7 +19,6 @@ After=network.target
 Type=simple
 User=gitea
 Group=gitea
-Documentation=man:gitea(1)
 WorkingDirectory=/var/lib/gitea
 ExecStart=/usr/bin/gitea web
 Restart=always
