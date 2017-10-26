@@ -37,8 +37,9 @@ STOP_SCHEDULE="${STOP_SCHEDULE:-QUIT/5/TERM/1/KILL/5}"
 
 do_start()
 {
+    export GITEA_WORK_DIR="$WORKINGDIR"
     $USERBIND $DAEMON
-    sh -c "USER=$USER start-stop-daemon --start --quiet --pidfile $PIDFILE --make-pidfile \\
+    sh -c "USER=$USER GITEA_WORK_DIR=$WORKINGDIR start-stop-daemon --start --quiet --pidfile $PIDFILE --make-pidfile \\
         --background --chdir $WORKINGDIR --chuid $USER \\
         --exec $DAEMON -- $DAEMON_ARGS"
 }

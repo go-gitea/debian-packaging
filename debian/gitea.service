@@ -23,7 +23,7 @@ Documentation=man:gitea(1)
 WorkingDirectory=/var/lib/gitea
 ExecStart=/usr/bin/gitea web
 Restart=always
-Environment=USER=gitea HOME=/var/lib/gitea
+Environment=USER=gitea HOME=/var/lib/gitea GITEA_WORK_DIR=/var/lib/gitea
 
 [Install]
 WantedBy=multi-user.target

@@ -51,33 +51,33 @@ usr/share/javascript/jquery-timepicker/jquery-ui-timepicker-addon.js
 
 # libjs-dropzone
 usr/share/javascript/libjs-dropzone/dropzone.min.js
-		usr/share/gitea/public/vendor/dropzone/dropzone.js
+		usr/share/gitea/public/vendor/plugins/dropzone/dropzone.js
 usr/share/javascript/libjs-dropzone/dropzone.css
-		usr/share/gitea/public/vendor/dropzone/dropzone.css
+		usr/share/gitea/public/vendor/plugins/dropzone/dropzone.css
 
 # libjs-autolink
 usr/share/javascript/libjs-autolink/autolink-min.js
-		usr/share/gitea/public/vendor/autolink/autolink.js
+		usr/share/gitea/public/vendor/plugins/autolink/autolink.js
 
-# libjs-semantic
+# libjs-semanticui
 usr/share/javascript/libjs-semanticui/semantic.css
-		usr/share/gitea/public/vendor/semantic/semantic.min.css
+		usr/share/gitea/public/vendor/plugins/semantic/semantic.min.css
 usr/share/javascript/libjs-semanticui/semantic.js
-		usr/share/gitea/public/vendor/semantic/semantic.min.js
+		usr/share/gitea/public/vendor/plugins/semantic/semantic.min.js
 usr/share/javascript/libjs-semanticui/themes
-		usr/share/gitea/public/vendor/semantic/themes
+		usr/share/gitea/public/vendor/plugins/semantic/themes
 
-# libjs-jquery-minicolor
+# libjs-jquery-minicolors
 usr/share/javascript/jquery-minicolors
 		usr/share/gitea/public/vendor/jquery.minicolors
 
 # libjs-cssrelpreload
 usr/share/javascript/cssrelpreload/cssrelpreload.js
-		usr/share/gitea/public/vendor/cssrelpreload/cssrelpreload.min.js
+		usr/share/gitea/public/vendor/plugins/cssrelpreload/cssrelpreload.min.js
 usr/share/javascript/cssrelpreload/loadCSS.js
-		usr/share/gitea/public/vendor/cssrelpreload/loadCSS.min.js
+		usr/share/gitea/public/vendor/plugins/cssrelpreload/loadCSS.min.js
 usr/share/javascript/cssrelpreload/onloadCSS.js
-		usr/share/gitea/public/vendor/cssrelpreload/onloadCSS.min.js
+		usr/share/gitea/public/vendor/plugins/cssrelpreload/onloadCSS.min.js
 
 # libjs-emojify
 usr/share/javascript/emojify.js/emojify.min.js
@@ -85,7 +85,7 @@ usr/share/javascript/emojify.js/emojify.min.js
 usr/share/javascript/emojify.js/images/emoji
 		usr/share/gitea/public/vendor/plugins/emojify/images
 
-# libjs-gitgraph
+# libjs-jquery-gitgraph
 usr/share/javascript/jquery-gitgraph/gitgraph.min.js
 		usr/share/gitea/public/vendor/plugins/gitgraph/gitgraph.js
 usr/share/javascript/jquery-gitgraph/gitgraph.css
@@ -95,7 +95,7 @@ usr/share/javascript/jquery-gitgraph/gitgraph.css
 usr/share/javascript/jquery-areyousure/jquery.are-you-sure.min.js
 		usr/share/gitea/public/vendor/plugins/jquery.areyousure/jquery.are-you-sure.js
 
-# libjs-pdf / pdf.js-common
+# libjs-pdf
 usr/share/javascript/pdf
 		usr/share/gitea/public/vendor/plugins/pdfjs
 
