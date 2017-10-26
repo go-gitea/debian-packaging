@@ -133,6 +133,7 @@ Standards-Version: 4.0.0
 Homepage: https://github.com/go-gitea/gitea
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/gitea.git
 Vcs-Git: https://anonscm.debian.org/git/pkg-go/packages/gitea.git
+Testsuite: autopkgtest-pkg-go
 XS-Go-Import-Path: code.gitea.io/gitea
 
 Package: gitea
@@ -140,7 +141,6 @@ Architecture: any
 Built-Using: ${misc:Built-Using}
 Pre-Depends: debconf
 Depends: adduser,
-         bash,
          git,
          gitea-common (= ${source:Version}),
          libcap2-bin,

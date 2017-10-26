@@ -1,21 +1,4 @@
-# Gitea has dependencies on core go packages that import unsafe.
-gitea: hardening-no-fortify-functions usr/bin/gitea
-
-# Unknwon is a nickname for Jiahua Chen.
-gitea: spelling-error-in-binary usr/bin/gitea unknwon unknown
-
-# This spelling error comes from a build dependency.
-gitea: spelling-error-in-binary usr/bin/gitea conain contain
-
-# writeN is used in a code sample
-gitea: spelling-error-in-binary usr/bin/gitea writeN written
-
-# Gitea includes external resources. These are stripped to meet DFSG.
-# They are re-introduced as part of the build process. These overrides
-# are because of the files that have been re-introduced.
-#
-# To remove these warnings, remove gen_public from d/rules.
-gitea: spelling-error-in-binary usr/bin/gitea commited committed
-gitea: spelling-error-in-binary usr/bin/gitea Destory Destroy
-gitea: spelling-error-in-binary usr/bin/gitea ot to
+# Spelling errors come from various sources.
+gitea: spelling-error-in-binary
+# Empty directories come from various sources.
 gitea: package-contains-empty-directory
