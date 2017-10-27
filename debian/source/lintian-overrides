@@ -1,4 +1,8 @@
 # options/license/* are copies of license text
 gitea source: license-problem-json-evil options/license/JSON
-gitea source: license-problem-php-license options/license/PHP-3.0
-gitea source: license-problem-php-license options/license/PHP-3.01
+gitea source: license-problem-php-license
+
+# false-positive; this is the source version
+gitea source: source-contains-prebuilt-javascript-object
+gitea source: insane-line-length-in-source-file
+gitea source: source-is-missing

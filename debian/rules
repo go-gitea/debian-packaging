@@ -1,5 +1,5 @@
 #!/usr/bin/make -f
-VERSION := 1.1.2
+VERSION := 1.2.1
 TAGS := sqlite pam
 
 # PIE builds (-buildmode=pie) need -pkgdir (abs path ref)

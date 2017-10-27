@@ -12,9 +12,9 @@ usr/share/fonts/web-fonts/octicons
 usr/share/fonts-font-awesome
 		usr/share/gitea/public/vendor/assets/font-awesome
 
-# libjs-swaggerui
-usr/share/javascript/libs-swaggerui
-		usr/share/gitea/public/vendor/assets/swagger-ui
+# libjs-swaggerui ;; using missing-sources
+#usr/share/javascript/libs-swaggerui
+#		usr/share/gitea/public/vendor/assets/swagger-ui
 
 
 ##
