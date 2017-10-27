@@ -6,3 +6,6 @@ gitea source: license-problem-php-license
 gitea source: source-contains-prebuilt-javascript-object
 gitea source: insane-line-length-in-source-file
 gitea source: source-is-missing
+
+# upstream does not sign releases
+gitea source: debian-watch-may-check-gpg-signature
