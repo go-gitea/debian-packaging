@@ -128,8 +128,9 @@ Build-Depends: debhelper (>= 10),
                golang-gopkg-yaml.v2-dev,
                golang-goprotobuf-dev,
                golang-strk.kbt-projects-go-libravatar-dev,
-               libpam0g-dev
-Standards-Version: 4.1.0
+               libpam0g-dev,
+               python
+Standards-Version: 4.1.1
 Homepage: https://github.com/go-gitea/gitea
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/gitea.git
 Vcs-Git: https://anonscm.debian.org/git/pkg-go/packages/gitea.git
