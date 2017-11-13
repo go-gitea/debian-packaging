@@ -39,6 +39,7 @@ class Templates(object):
             <!DOCTYPE html><html><head>
               <meta charset="UTF-8">
               <title>{title}</title>
+              <link rel="shortcut icon" href="/img/favicon.png" />
               {css}
             </head><body>
               <div class="wrapper">
