@@ -15,7 +15,7 @@ PACKAGES ?= $(addprefix code.gitea.io/gitea/,$(filter-out integrations,$(shell g
 	dh $@ --buildsystem=golang --with=golang
 
 override_dh_auto_build:
-	python debian/helpers/swagger_build.py
+	SWAGGER_SRC=public/swagger.v1.json SWAGGER_DST=templates/swagger.tmpl python debian/helpers/swagger_build.py
 	go install -v -p 4 \
 		-buildmode=pie \
 		-pkgdir="$(GOPATH)" \

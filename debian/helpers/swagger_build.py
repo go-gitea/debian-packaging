@@ -23,9 +23,11 @@ License:   Expat
            LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
            OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
            THE SOFTWARE.
-Testing:   Get json:: python -c 'import swagger_build; swagger_build.download_json()'
-           Override:: export SWAGGER_DST='swaggerui.html' SWAGGER_SRC='swagger.v1.json'
-           Build::    ./swagger_build.py
+Testing:   Get json : python -c 'import swagger_build; swagger_build.download_json()'
+           Override : export SWAGGER_DST='swaggerui.html' SWAGGER_SRC='swagger.v1.json'
+           Build    : ./swagger_build.py
+Env Vars:  SWAGGER_DST : Output destination, will overwrite existing files
+           SWAGGER_SRC : Source JSON file
 '''
 import json
 import os
@@ -47,7 +49,8 @@ class Templates(object):
                 <h2>[ Version: {version} | Base URL: {baseurl} ]</h2>
                 <h3>{description}</h3>
                 <p>Produced by a hacky script to avoid Swagger-UI dependencies.
-                <br />Ref: <a href="https://wiki.debian.org/Javascript/Nodejs/Tasks/swagger-ui">https://wiki.debian.org/Javascript/Nodejs/Tasks/swagger-ui</a></p>
+                <br />Ref: <a href="https://wiki.debian.org/Javascript/Nodejs/Tasks/swagger-ui">
+                https://wiki.debian.org/Javascript/Nodejs/Tasks/swagger-ui</a></p>
                 {api_body}
                 {js}
               </div>
@@ -66,13 +69,13 @@ class Templates(object):
 
     path = textwrap.dedent('''\
             <div class="opblock-section opblock-{api_method}">
-              <a id="{api_method}-{api_path}" href="#" onclick="toggle_opbody(this.id); return false;">
+              <a id="section-{section_id}" href="#" onclick="toggle_opbody(this.id); return false;">
                 <div class="opblock-summary">
                   <span class="opblock-summary-method summary-{api_method}">{api_method}</span>
                   <span class="opblock-summary-path">{api_path}</span>
                 </div>
               </a>
-              <div class="opblock-body" style="display: none;" id="opbod-{api_method}-{api_path}">
+              <div class="opblock-body" style="display: none;" id="opbod-section-{section_id}">
                 {subsections}
               </div>
             </div>
@@ -156,6 +159,7 @@ class Templates(object):
               th { font-size: 12px; padding: 0 0 12px; text-align: left;
                         border-bottom: 1px solid rgba(59,65,81,.2); }
               td { max-width: 20%; min-width: 6em; padding: 10px 0; vertical-align: top; }
+              .red { color: #ff0000; }
             </style>
             ''')
 
@@ -198,7 +202,7 @@ def read_json(path='public/swagger.v1.json'):
     '''Read JSON input from file.'''
     src = os.environ.get('SWAGGER_SRC', path)
     try:
-        j = json.load(open(path, 'r'))
+        j = json.load(open(src, 'r'))
     except:
         return None
     return j
@@ -211,12 +215,11 @@ def write_static(json_data, destination='templates/swagger.tmpl'):
             die('JSON data is missing required data: {}.'.format(attr))
 
     dest = os.environ.get('SWAGGER_DST', destination)
-
     try:
         with open(dest, 'w') as fh:
             fh.write(build_page(json_data))
     except IOError:
-        die('Unable to create output destination: {}'.format(dest))
+        die('Unable to create output destination: {}'.format(destination))
 
 
 def build_page(json_data):
@@ -244,8 +247,10 @@ def build_body(json_data):
     paths = json_data['paths']
     topics = gen_topics(paths)
     sb = ''
-    for k, v in topics.items():
-        api_d = build_section(json_data, v)
+    section_id = 0
+    for k, v in sorted(topics.iteritems()):
+        section_id += 1
+        api_d = build_section(json_data, v, section_id)
         sb += Templates.section.format(**{
             'title': k,
             'api_d': api_d})
@@ -268,18 +273,21 @@ def gen_topics(paths):
     return tags
 
 
-def build_section(json_data, keys):
+def build_section(json_data, keys, section_id=0):
     '''Build a HTML for a list (keys) of available API queries.'''
     paths = json_data['paths']
     sb = ''
-    for key in keys:
+    key_id = 0
+    for key in sorted(keys):
+        key_id += 1
         path, method = key.split('^^')
         parameters = build_parameter_table(paths[path][method])
         responses = build_responses_table(paths[path][method], json_data)
         sb += Templates.path.format(**{
             'api_path': path,
             'api_method': method,
-            'subsections': str(parameters + responses)})
+            'subsections': str(parameters + responses),
+            'section_id': '{}-{}'.format(section_id, key_id)})
     return sb
 
 
@@ -290,15 +298,16 @@ def build_parameter_table(api):
 
     rows = ''
     for row in api['parameters']:
-        description = row['description'] if 'description' in row else ''
+        description = row.get('description', '')
+        required = ' <span class="red">*</span>' if row.get('required', False) else ''
         if 'type' in row:
             vartype = row['type']
-        elif 'schema' in row and 'type' in row['schema']:
+        elif 'type' in row.get('schema', {}):
             vartype = row['schema']['type']
         else:
             vartype = 'undefined'
         rows += Templates.param_row.format(**{
-            'name': row['name'],
+            'name': row['name'] + required,
             'desc': description,
             'type': vartype})
 
