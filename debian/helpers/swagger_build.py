@@ -5,27 +5,8 @@ Reason:    Swagger-UI has over 750 JS libs that would require individual
            packaging, review, and maintenance.
            Ref: https://wiki.debian.org/Javascript/Nodejs/Tasks/swagger-ui
 Copyright: Michael Lustfield (MTecknology)
-License:   Expat
-           Permission is hereby granted, free of charge, to any person obtaining a copy
-           of this software and associated documentation files (the "Software"), to deal
-           in the Software without restriction, including without limitation the rights
-           to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-           copies of the Software, and to permit persons to whom the Software is
-           furnished to do so, subject to the following conditions:
-           .
-           The above copyright notice and this permission notice shall be included in
-           all copies or substantial portions of the Software.
-           .
-           THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-           IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-           FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-           AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-           LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-           OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-           THE SOFTWARE.
-Testing:   Get json : python -c 'import swagger_build; swagger_build.download_json()'
-           Override : export SWAGGER_DST='swaggerui.html' SWAGGER_SRC='swagger.v1.json'
-           Build    : ./swagger_build.py
+License:   Expat with exclusions for MIT and Apache-2.0
+Upstream:  https://github.com/MTecknology/static_swagger-ui
 Env Vars:  SWAGGER_DST : Output destination, will overwrite existing files
            SWAGGER_SRC : Source JSON file
 '''
@@ -33,6 +14,7 @@ import json
 import os
 import sys
 import textwrap
+import urllib2
 
 
 class Templates(object):
@@ -132,9 +114,9 @@ class Templates(object):
               .opblock-section { margin: 0 0 15px; border: 1px solid; border-radius: 4px;
                         box-shadow: 0 0 3px rgba(0,0,0,.19); }
               .opblock-summary { display: flex; padding: 5px; align-items: center;
-                        font-weight: 700; border-radius: 3px; text-shadow: 0 1px 0 rgba(0,0,0,.1); }
+                        border-radius: 3px; text-shadow: 0 1px 0 rgba(0,0,0,.1); }
               .opblock-summary-method { padding: 6px 15px; border-radius: 3px; text-align: center;
-                        padding: 6px 15px; min-width: 80px; color: #ffffff; }
+                        padding: 6px 15px; min-width: 80px; color: #ffffff; font-weight: 700; }
               .opblock-summary-path { font-size: 16px; display: flex; flex: 0 3 auto; word-break: break-all;
                         padding: 0 10px; font-family: monospace; font-weight: 600; }
               .opblock-header { display: flex; align-items: center;  min-height: 50px;
@@ -192,43 +174,36 @@ def die(msg=None, exit_code=1):
 
 def main():
     '''Read a JSON file and turn it into a static page.'''
-    data = read_json()
-    if not data:
-        die('Unable to read JSON data from file.')
-    write_static(data)
+    json_data = read_json()
+    page_data = render_page(json_data)
+    write_static(page_data)
 
 
 def read_json(path='public/swagger.v1.json'):
     '''Read JSON input from file.'''
     src = os.environ.get('SWAGGER_SRC', path)
-    try:
-        j = json.load(open(src, 'r'))
-    except:
-        return None
-    return j
+    return json.load(open(src, 'r'))
 
 
-def write_static(json_data, destination='templates/swagger.tmpl'):
-    '''Generate a Swagger-like HTML page.'''
-    for attr in ['info', 'basePath', 'paths']:
-        if attr not in json_data:
-            die('JSON data is missing required data: {}.'.format(attr))
-
+def write_static(page, destination='templates/swagger.tmpl'):
+    '''Generate a Swagger-like HTML page.
+    Returns: True for write success | False for failure.'''
     dest = os.environ.get('SWAGGER_DST', destination)
     try:
         with open(dest, 'w') as fh:
-            fh.write(build_page(json_data))
-    except IOError:
-        die('Unable to create output destination: {}'.format(destination))
+            fh.write(page)
+    except:
+        return False
+    return True
 
 
-def build_page(json_data):
+def render_page(json_data):
     '''Assemble the entire page.'''
     info = json_data['info']
     baseurl = json_data['basePath']
     for attr in ['description', 'title', 'license', 'version']:
         if attr not in info:
-            die('JSON data is missing required data: {}.'.format(attr))
+            raise 'JSON data is missing required data: {}.'.format(attr)
 
     api_body = build_body(json_data)
 
@@ -352,15 +327,19 @@ def find_response(needle, haystack):
 
 
 def download_json(url='https://try.gitea.io/swagger.v1.json', output='swagger.v1.json'):
-    '''Lazy way to make sure we have a copy of test data.
-    This should be used only for testing purposes.'''
-    import urllib2
-    if not os.path.exists(output):
-        response = urllib2.urlopen(url)
-        html = response.read()
-        with open(output, 'w') as fh:
-            fh.write(html)
+    '''Lazy way to make sure we have a copy of test data.'''
+    out = os.environ.get('SWAGGER_DST', output)
+    src = os.environ.get('SWAGGER_URL', url)
+    if not os.path.exists(out):
+        response = urllib2.urlopen(src)
+        json_data = response.read()
+        with open(out, 'w') as fh:
+            fh.write(json_data)
 
 
 if __name__ == '__main__':
+    if not os.environ.get('SWAGGER_DST', ''):
+        os.environ['SWAGGER_DST'] = 'swagger.html'
+    if not os.environ.get('SWAGGER_SRC', ''):
+        os.environ['SWAGGER_SRC'] = 'swagger.v1.json'
     main()
