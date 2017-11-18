@@ -6,7 +6,7 @@ TAGS := sqlite pam
 
 # PIE builds (-buildmode=pie) need -pkgdir (abs path ref)
 GOPATH ?= $(CURDIR)/obj-$(DEB_TARGET_GNU_TYPE)
-LDFLAGS = -X 'main.Tags=$(TAGS)' -extldflags='-Wl,-z,relro,-z,now'
+LDFLAGS = -X 'main.Tags=$(TAGS)' -extldflags=-Wl,-z,relro,-z,now
 
 export GOPATH LDFLAGS TAGS
 
@@ -24,7 +24,7 @@ override_dh_auto_build: static_swagger
 
 static_swagger:
 	# Build a static swagger api documentation page
-	# Updated script:
+	# Update script:
 	#   wget https://raw.githubusercontent.com/MTecknology/static_swagger-ui/master/build.py -O debian/helpers/swagger_build.py
 	#   sed -i '/REMOVE/,/REMOVE/d' debian/helpers/swagger_build.py
 	SWAGGER_SRC=public/swagger.v1.json SWAGGER_DST=templates/swagger.tmpl python debian/helpers/swagger_build.py
