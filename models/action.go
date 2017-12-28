@@ -16,7 +16,6 @@ import (
 
 	"github.com/Unknwon/com"
 	"github.com/go-xorm/builder"
-	"github.com/go-xorm/xorm"
 
 	"code.gitea.io/git"
 	api "code.gitea.io/sdk/gitea"
@@ -46,6 +45,8 @@ const (
 	ActionReopenIssue                             // 13
 	ActionClosePullRequest                        // 14
 	ActionReopenPullRequest                       // 15
+	ActionDeleteTag                               // 16
+	ActionDeleteBranch                            // 17
 )
 
 var (
@@ -86,27 +87,17 @@ type Action struct {
 	IsPrivate   bool      `xorm:"INDEX NOT NULL DEFAULT false"`
 	Content     string    `xorm:"TEXT"`
 	Created     time.Time `xorm:"-"`
-	CreatedUnix int64     `xorm:"INDEX"`
+	CreatedUnix int64     `xorm:"INDEX created"`
 }
 
-// BeforeInsert will be invoked by XORM before inserting a record
-// representing this object.
-func (a *Action) BeforeInsert() {
-	a.CreatedUnix = time.Now().Unix()
-}
-
-// AfterSet updates the webhook object upon setting a column.
-func (a *Action) AfterSet(colName string, _ xorm.Cell) {
-	switch colName {
-	case "created_unix":
-		a.Created = time.Unix(a.CreatedUnix, 0).Local()
-	}
+// AfterLoad is invoked from XORM after setting the values of all fields of this object.
+func (a *Action) AfterLoad() {
+	a.Created = time.Unix(a.CreatedUnix, 0).Local()
 }
 
 // GetOpType gets the ActionType of this action.
-// TODO: change return type to ActionType ?
-func (a *Action) GetOpType() int {
-	return int(a.OpType)
+func (a *Action) GetOpType() ActionType {
+	return a.OpType
 }
 
 func (a *Action) loadActUser() {
@@ -150,7 +141,7 @@ func (a *Action) ShortActUserName() string {
 // GetActAvatar the action's user's avatar link
 func (a *Action) GetActAvatar() string {
 	a.loadActUser()
-	return a.ActUser.AvatarLink()
+	return a.ActUser.RelAvatarLink()
 }
 
 // GetRepoUserName returns the name of the action repository owner.
@@ -561,6 +552,12 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 	// Check it's tag push or branch.
 	if strings.HasPrefix(opts.RefFullName, git.TagPrefix) {
 		opType = ActionPushTag
+		if opts.NewCommitID == git.EmptySHA {
+			opType = ActionDeleteTag
+		}
+		opts.Commits = &PushCommits{}
+	} else if opts.NewCommitID == git.EmptySHA {
+		opType = ActionDeleteBranch
 		opts.Commits = &PushCommits{}
 	} else {
 		// if not the first commit, set the compare URL.
@@ -606,8 +603,60 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 	apiRepo := repo.APIFormat(AccessModeNone)
 
 	var shaSum string
+	var isHookEventPush = false
 	switch opType {
 	case ActionCommitRepo: // Push
+		isHookEventPush = true
+
+		if isNewBranch {
+			gitRepo, err := git.OpenRepository(repo.RepoPath())
+			if err != nil {
+				log.Error(4, "OpenRepository[%s]: %v", repo.RepoPath(), err)
+			}
+
+			shaSum, err = gitRepo.GetBranchCommitID(refName)
+			if err != nil {
+				log.Error(4, "GetBranchCommitID[%s]: %v", opts.RefFullName, err)
+			}
+			if err = PrepareWebhooks(repo, HookEventCreate, &api.CreatePayload{
+				Ref:     refName,
+				Sha:     shaSum,
+				RefType: "branch",
+				Repo:    apiRepo,
+				Sender:  apiPusher,
+			}); err != nil {
+				return fmt.Errorf("PrepareWebhooks: %v", err)
+			}
+		}
+
+	case ActionDeleteBranch: // Delete Branch
+		isHookEventPush = true
+
+	case ActionPushTag: // Create
+		isHookEventPush = true
+
+		gitRepo, err := git.OpenRepository(repo.RepoPath())
+		if err != nil {
+			log.Error(4, "OpenRepository[%s]: %v", repo.RepoPath(), err)
+		}
+		shaSum, err = gitRepo.GetTagCommitID(refName)
+		if err != nil {
+			log.Error(4, "GetTagCommitID[%s]: %v", opts.RefFullName, err)
+		}
+		if err = PrepareWebhooks(repo, HookEventCreate, &api.CreatePayload{
+			Ref:     refName,
+			Sha:     shaSum,
+			RefType: "tag",
+			Repo:    apiRepo,
+			Sender:  apiPusher,
+		}); err != nil {
+			return fmt.Errorf("PrepareWebhooks: %v", err)
+		}
+	case ActionDeleteTag: // Delete Tag
+		isHookEventPush = true
+	}
+
+	if isHookEventPush {
 		if err = PrepareWebhooks(repo, HookEventPush, &api.PushPayload{
 			Ref:        opts.RefFullName,
 			Before:     opts.OldCommitID,
@@ -620,41 +669,6 @@ func CommitRepoAction(opts CommitRepoActionOptions) error {
 		}); err != nil {
 			return fmt.Errorf("PrepareWebhooks: %v", err)
 		}
-
-		if isNewBranch {
-			gitRepo, err := git.OpenRepository(repo.RepoPath())
-			if err != nil {
-				log.Error(4, "OpenRepository[%s]: %v", repo.RepoPath(), err)
-			}
-			shaSum, err = gitRepo.GetBranchCommitID(refName)
-			if err != nil {
-				log.Error(4, "GetBranchCommitID[%s]: %v", opts.RefFullName, err)
-			}
-			return PrepareWebhooks(repo, HookEventCreate, &api.CreatePayload{
-				Ref:     refName,
-				Sha:     shaSum,
-				RefType: "branch",
-				Repo:    apiRepo,
-				Sender:  apiPusher,
-			})
-		}
-
-	case ActionPushTag: // Create
-		gitRepo, err := git.OpenRepository(repo.RepoPath())
-		if err != nil {
-			log.Error(4, "OpenRepository[%s]: %v", repo.RepoPath(), err)
-		}
-		shaSum, err = gitRepo.GetTagCommitID(refName)
-		if err != nil {
-			log.Error(4, "GetTagCommitID[%s]: %v", opts.RefFullName, err)
-		}
-		return PrepareWebhooks(repo, HookEventCreate, &api.CreatePayload{
-			Ref:     refName,
-			Sha:     shaSum,
-			RefType: "tag",
-			Repo:    apiRepo,
-			Sender:  apiPusher,
-		})
 	}
 
 	return nil

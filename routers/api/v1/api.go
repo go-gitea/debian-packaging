@@ -4,11 +4,7 @@
 
 // Package v1 Gitea API.
 //
-// This provide API interface to communicate with this Gitea instance.
-//
-// Terms Of Service:
-//
-// there are no TOS at this moment, use at your own risk we take no responsibility
+// This documentation describes the Gitea API.
 //
 //     Schemes: http, https
 //     BasePath: /api/v1
@@ -51,11 +47,6 @@ package v1
 import (
 	"strings"
 
-	"github.com/go-macaron/binding"
-	"gopkg.in/macaron.v1"
-
-	api "code.gitea.io/sdk/gitea"
-
 	"code.gitea.io/gitea/models"
 	"code.gitea.io/gitea/modules/auth"
 	"code.gitea.io/gitea/modules/context"
@@ -63,8 +54,13 @@ import (
 	"code.gitea.io/gitea/routers/api/v1/misc"
 	"code.gitea.io/gitea/routers/api/v1/org"
 	"code.gitea.io/gitea/routers/api/v1/repo"
+	_ "code.gitea.io/gitea/routers/api/v1/swagger" // for swagger generation
 	"code.gitea.io/gitea/routers/api/v1/user"
 	"code.gitea.io/gitea/routers/api/v1/utils"
+	api "code.gitea.io/sdk/gitea"
+
+	"github.com/go-macaron/binding"
+	"gopkg.in/macaron.v1"
 )
 
 func repoAssignment() macaron.Handler {
@@ -275,8 +271,11 @@ func mustAllowPulls(ctx *context.Context) {
 func RegisterRoutes(m *macaron.Macaron) {
 	bind := binding.Bind
 
+	m.Get("/swagger", misc.Swagger) //Render V1 by default
+
 	m.Group("/v1", func() {
 		// Miscellaneous
+		m.Get("/swagger", misc.Swagger)
 		m.Get("/version", misc.Version)
 		m.Post("/markdown", bind(api.MarkdownOption{}), misc.Markdown)
 		m.Post("/markdown/raw", misc.MarkdownRaw)
@@ -317,7 +316,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 			m.Get("", user.GetAuthenticatedUser)
 			m.Combo("/emails").Get(user.ListEmails).
 				Post(bind(api.CreateEmailOption{}), user.AddEmail).
-				Delete(bind(api.CreateEmailOption{}), user.DeleteEmail)
+				Delete(bind(api.DeleteEmailOption{}), user.DeleteEmail)
 
 			m.Get("/followers", user.ListMyFollowers)
 			m.Group("/following", func() {
@@ -350,6 +349,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Delete("", user.Unstar)
 				}, repoAssignment())
 			})
+			m.Get("/times", repo.ListMyTrackedTimes)
 
 			m.Get("/subscriptions", user.GetMyWatchedRepos)
 		}, reqToken())
@@ -381,13 +381,13 @@ func RegisterRoutes(m *macaron.Macaron) {
 						Put(bind(api.AddCollaboratorOption{}), repo.AddCollaborator).
 						Delete(repo.DeleteCollaborator)
 				}, reqToken())
-				m.Get("/raw/*", context.RepoRef(), repo.GetRawFile)
+				m.Get("/raw/*", context.RepoRefByType(context.RepoRefAny), repo.GetRawFile)
 				m.Get("/archive/*", repo.GetArchive)
 				m.Combo("/forks").Get(repo.ListForks).
 					Post(reqToken(), bind(api.CreateForkOption{}), repo.CreateFork)
 				m.Group("/branches", func() {
 					m.Get("", repo.ListBranches)
-					m.Get("/*", context.RepoRef(), repo.GetBranch)
+					m.Get("/*", context.RepoRefByType(context.RepoRefBranch), repo.GetBranch)
 				})
 				m.Group("/keys", func() {
 					m.Combo("").Get(repo.ListDeployKeys).
@@ -395,6 +395,11 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Combo("/:id").Get(repo.GetDeployKey).
 						Delete(repo.DeleteDeploykey)
 				}, reqToken(), reqRepoWriter())
+				m.Group("/times", func() {
+					m.Combo("").Get(repo.ListTrackedTimesByRepository)
+					m.Combo("/:timetrackingusername").Get(repo.ListTrackedTimesByUser)
+
+				}, mustEnableIssues)
 				m.Group("/issues", func() {
 					m.Combo("").Get(repo.ListIssues).
 						Post(reqToken(), bind(api.CreateIssueOption{}), repo.CreateIssue)
@@ -422,6 +427,10 @@ func RegisterRoutes(m *macaron.Macaron) {
 							m.Delete("/:id", reqToken(), repo.DeleteIssueLabel)
 						})
 
+						m.Group("/times", func() {
+							m.Combo("").Get(repo.ListTrackedTimes).
+								Post(reqToken(), bind(api.AddTimeOption{}), repo.AddTime)
+						})
 					})
 				}, mustEnableIssues)
 				m.Group("/labels", func() {
@@ -470,8 +479,8 @@ func RegisterRoutes(m *macaron.Macaron) {
 						Post(reqToken(), reqRepoWriter(), bind(api.CreateStatusOption{}), repo.NewCommitStatus)
 				})
 				m.Group("/commits/:ref", func() {
-					m.Get("/status", repo.GetCombinedCommitStatus)
-					m.Get("/statuses", repo.GetCommitStatuses)
+					m.Get("/status", repo.GetCombinedCommitStatusByRef)
+					m.Get("/statuses", repo.GetCommitStatusesByRef)
 				})
 			}, repoAssignment())
 		})

@@ -14,12 +14,15 @@ import (
 	"strings"
 
 	"code.gitea.io/gitea/modules/log"
+	"code.gitea.io/gitea/modules/markup/external"
 	"code.gitea.io/gitea/modules/setting"
 	"code.gitea.io/gitea/routers"
 	"code.gitea.io/gitea/routers/routes"
 
+	"github.com/Unknwon/com"
 	context2 "github.com/gorilla/context"
 	"github.com/urfave/cli"
+	ini "gopkg.in/ini.v1"
 )
 
 // CmdWeb represents the available web sub-command.
@@ -59,6 +62,8 @@ func runWeb(ctx *cli.Context) error {
 
 	routers.GlobalInit()
 
+	external.RegisterParsers()
+
 	m := routes.NewMacaron()
 	routes.RegisterRoutes(m)
 
@@ -66,6 +71,34 @@ func runWeb(ctx *cli.Context) error {
 	if ctx.IsSet("port") {
 		setting.AppURL = strings.Replace(setting.AppURL, setting.HTTPPort, ctx.String("port"), 1)
 		setting.HTTPPort = ctx.String("port")
+
+		switch setting.Protocol {
+		case setting.UnixSocket:
+		case setting.FCGI:
+		default:
+			// Save LOCAL_ROOT_URL if port changed
+			cfg := ini.Empty()
+			if com.IsFile(setting.CustomConf) {
+				// Keeps custom settings if there is already something.
+				if err := cfg.Append(setting.CustomConf); err != nil {
+					return fmt.Errorf("Failed to load custom conf '%s': %v", setting.CustomConf, err)
+				}
+			}
+
+			defaultLocalURL := string(setting.Protocol) + "://"
+			if setting.HTTPAddr == "0.0.0.0" {
+				defaultLocalURL += "localhost"
+			} else {
+				defaultLocalURL += setting.HTTPAddr
+			}
+			defaultLocalURL += ":" + setting.HTTPPort + "/"
+
+			cfg.Section("server").Key("LOCAL_ROOT_URL").SetValue(defaultLocalURL)
+
+			if err := cfg.SaveTo(setting.CustomConf); err != nil {
+				return fmt.Errorf("Error saving generated JWT Secret to custom config: %v", err)
+			}
+		}
 	}
 
 	var listenAddr string

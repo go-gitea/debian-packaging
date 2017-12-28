@@ -15,7 +15,6 @@ else
 endif
 
 BINDATA := modules/{options,public,templates}/bindata.go
-STYLESHEETS := $(wildcard public/less/index.less public/less/_*.less)
 DOCKER_TAG := gitea/gitea:latest
 GOFILES := $(shell find . -name "*.go" -type f ! -path "./vendor/*" ! -path "*/bindata.go")
 GOFMT ?= gofmt -s
@@ -31,6 +30,15 @@ SOURCES ?= $(shell find . -name "*.go" -type f)
 TAGS ?=
 
 TMPDIR := $(shell mktemp -d 2>/dev/null || mktemp -d -t 'gitea-temp')
+
+TEST_MYSQL_HOST ?= mysql:3306
+TEST_MYSQL_DBNAME ?= testgitea
+TEST_MYSQL_USERNAME ?= root
+TEST_MYSQL_PASSWORD ?=
+TEST_PGSQL_HOST ?= pgsql:5432
+TEST_PGSQL_DBNAME ?= testgitea
+TEST_PGSQL_USERNAME ?= postgres
+TEST_PGSQL_PASSWORD ?= postgres
 
 ifeq ($(OS), Windows_NT)
 	EXECUTABLE := gitea.exe
@@ -54,7 +62,11 @@ all: build
 .PHONY: clean
 clean:
 	$(GO) clean -i ./...
-	rm -rf $(EXECUTABLE) $(DIST) $(BINDATA) integrations*.test
+	rm -rf $(EXECUTABLE) $(DIST) $(BINDATA) \
+		integrations*.test \
+		integrations/gitea-integration-pgsql/ integrations/gitea-integration-mysql/ integrations/gitea-integration-sqlite/ \
+		integrations/indexers-mysql/ integrations/indexers-pgsql integrations/indexers-sqlite \
+		integrations/mysql.ini integrations/pgsql.ini
 
 .PHONY: fmt
 fmt:
@@ -77,8 +89,6 @@ generate-swagger:
 		$(GO) get -u github.com/go-swagger/go-swagger/cmd/swagger; \
 	fi
 	swagger generate spec -o ./public/swagger.v1.json
-	$(SED_INPLACE) "s;\".ref\": \"#/definitions/GPGKey\";\"type\": \"object\";g" ./public/swagger.v1.json
-	$(SED_INPLACE) "s;^          \".ref\": \"#/definitions/Repository\";          \"type\": \"object\";g" ./public/swagger.v1.json
 
 .PHONY: errcheck
 errcheck:
@@ -119,20 +129,21 @@ fmt-check:
 	fi;
 
 .PHONY: test
-test: fmt-check
+test:
 	$(GO) test $(PACKAGES)
 
-.PHONY: test-coverage
-test-coverage: unit-test-coverage integration-test-coverage
+.PHONY: coverage
+coverage:
 	@hash gocovmerge > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
 		$(GO) get -u github.com/wadey/gocovmerge; \
 	fi
+	echo "mode: set" > coverage.all
 	for PKG in $(PACKAGES); do\
-	  touch $$GOPATH/src/$$PKG/coverage.out;\
-	  egrep "$$PKG[^/]*\.go" integration.coverage.out > int.coverage.out;\
-	  gocovmerge $$GOPATH/src/$$PKG/coverage.out int.coverage.out > pkg.coverage.out;\
-	  mv pkg.coverage.out $$GOPATH/src/$$PKG/coverage.out;\
-	  rm int.coverage.out;\
+		egrep "$$PKG[^/]*\.go" integration.coverage.out > int.coverage.out;\
+		gocovmerge $$GOPATH/src/$$PKG/coverage.out int.coverage.out > pkg.coverage.out;\
+		grep -h -v "^mode:" pkg.coverage.out >>  coverage.all;\
+		mv pkg.coverage.out $$GOPATH/src/$$PKG/coverage.out;\
+		rm int.coverage.out;\
 	done;
 
 .PHONY: unit-test-coverage
@@ -156,34 +167,48 @@ test-vendor:
 test-sqlite: integrations.sqlite.test
 	GITEA_ROOT=${CURDIR} GITEA_CONF=integrations/sqlite.ini ./integrations.sqlite.test
 
+generate-ini:
+	sed -e 's|{{TEST_MYSQL_HOST}}|${TEST_MYSQL_HOST}|g' \
+		-e 's|{{TEST_MYSQL_DBNAME}}|${TEST_MYSQL_DBNAME}|g' \
+		-e 's|{{TEST_MYSQL_USERNAME}}|${TEST_MYSQL_USERNAME}|g' \
+		-e 's|{{TEST_MYSQL_PASSWORD}}|${TEST_MYSQL_PASSWORD}|g' \
+			integrations/mysql.ini.tmpl > integrations/mysql.ini
+	sed -e 's|{{TEST_PGSQL_HOST}}|${TEST_PGSQL_HOST}|g' \
+		-e 's|{{TEST_PGSQL_DBNAME}}|${TEST_PGSQL_DBNAME}|g' \
+		-e 's|{{TEST_PGSQL_USERNAME}}|${TEST_PGSQL_USERNAME}|g' \
+		-e 's|{{TEST_PGSQL_PASSWORD}}|${TEST_PGSQL_PASSWORD}|g' \
+			integrations/pgsql.ini.tmpl > integrations/pgsql.ini
+
 .PHONY: test-mysql
-test-mysql: integrations.test
-	GITEA_ROOT=${CURDIR} GITEA_CONF=integrations/mysql.ini ./integrations.test
+test-mysql: integrations.mysql.test generate-ini
+	GITEA_ROOT=${CURDIR} GITEA_CONF=integrations/mysql.ini ./integrations.mysql.test
 
 .PHONY: test-pgsql
-test-pgsql: integrations.test
-	GITEA_ROOT=${CURDIR} GITEA_CONF=integrations/pgsql.ini ./integrations.test
-
+test-pgsql: integrations.pgsql.test generate-ini
+	GITEA_ROOT=${CURDIR} GITEA_CONF=integrations/pgsql.ini ./integrations.pgsql.test
 
 .PHONY: bench-sqlite
 bench-sqlite: integrations.sqlite.test
 	GITEA_ROOT=${CURDIR} GITEA_CONF=integrations/sqlite.ini ./integrations.sqlite.test -test.bench .
 
 .PHONY: bench-mysql
-bench-mysql: integrations.test
-	GITEA_ROOT=${CURDIR} GITEA_CONF=integrations/mysql.ini ./integrations.test -test.bench .
+bench-mysql: integrations.mysql.test generate-ini
+	GITEA_ROOT=${CURDIR} GITEA_CONF=integrations/mysql.ini ./integrations.mysql.test -test.bench .
 
 .PHONY: bench-pgsql
-bench-pgsql: integrations.test
-	GITEA_ROOT=${CURDIR} GITEA_CONF=integrations/pgsql.ini ./integrations.test -test.bench .
+bench-pgsql: integrations.pgsql.test generate-ini
+	GITEA_ROOT=${CURDIR} GITEA_CONF=integrations/pgsql.ini ./integrations.pgsql.test -test.bench .
 
 
 .PHONY: integration-test-coverage
-integration-test-coverage: integrations.cover.test
+integration-test-coverage: integrations.cover.test generate-ini
 	GITEA_ROOT=${CURDIR} GITEA_CONF=integrations/mysql.ini ./integrations.cover.test -test.coverprofile=integration.coverage.out
 
-integrations.test: $(SOURCES)
-	$(GO) test -c code.gitea.io/gitea/integrations
+integrations.mysql.test: $(SOURCES)
+	$(GO) test -c code.gitea.io/gitea/integrations -o integrations.mysql.test
+
+integrations.pgsql.test: $(SOURCES)
+	$(GO) test -c code.gitea.io/gitea/integrations -o integrations.pgsql.test
 
 integrations.sqlite.test: $(SOURCES)
 	$(GO) test -c code.gitea.io/gitea/integrations -o integrations.sqlite.test -tags 'sqlite'
@@ -262,31 +287,25 @@ public/js/index.js: $(JAVASCRIPTS)
 	cat $< >| $@
 
 .PHONY: stylesheets-check
-stylesheets-check: stylesheets
+stylesheets-check: generate-stylesheets
 	@diff=$$(git diff public/css/index.css); \
 	if [ -n "$$diff" ]; then \
-		echo "Please run 'make stylesheets' and commit the result:"; \
+		echo "Please run 'make generate-stylesheets' and commit the result:"; \
 		echo "$${diff}"; \
 		exit 1; \
 	fi;
 
-.PHONY: stylesheets
-stylesheets: public/css/index.css
-
-.IGNORE: public/css/index.css
-public/css/index.css: $(STYLESHEETS)
-	@which lessc > /dev/null; if [ $$? -ne 0 ]; then \
-		$(GO) get -u github.com/kib357/less-go/lessc; \
-	fi
-	lessc -i $< -o $@
+.PHONY: generate-stylesheets
+generate-stylesheets:
+	node_modules/.bin/lessc --no-ie-compat --clean-css public/less/index.less public/css/index.css
 
 .PHONY: swagger-ui
 swagger-ui:
 	rm -Rf public/vendor/assets/swagger-ui
-	git clone --depth=10 -b v3.0.7 --single-branch https://github.com/swagger-api/swagger-ui.git $(TMPDIR)/swagger-ui
+	git clone --depth=10 -b v3.3.2 --single-branch https://github.com/swagger-api/swagger-ui.git $(TMPDIR)/swagger-ui
 	mv $(TMPDIR)/swagger-ui/dist public/vendor/assets/swagger-ui
 	rm -Rf $(TMPDIR)/swagger-ui
-	$(SED_INPLACE) "s;http://petstore.swagger.io/v2/swagger.json;../../swagger.v1.json;g" public/assets/swagger-ui/index.html
+	$(SED_INPLACE) "s;http://petstore.swagger.io/v2/swagger.json;../../../swagger.v1.json;g" public/vendor/assets/swagger-ui/index.html
 
 .PHONY: update-translations
 update-translations:

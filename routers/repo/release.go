@@ -12,7 +12,7 @@ import (
 	"code.gitea.io/gitea/modules/base"
 	"code.gitea.io/gitea/modules/context"
 	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/markdown"
+	"code.gitea.io/gitea/modules/markup/markdown"
 	"code.gitea.io/gitea/modules/setting"
 
 	"github.com/Unknwon/paginater"
@@ -191,6 +191,7 @@ func NewReleasePost(ctx *context.Context, form auth.NewReleaseForm) {
 
 		rel.Title = form.Title
 		rel.Note = form.Content
+		rel.Target = form.Target
 		rel.IsDraft = len(form.Draft) > 0
 		rel.IsPrerelease = form.Prerelease
 		rel.PublisherID = ctx.User.ID

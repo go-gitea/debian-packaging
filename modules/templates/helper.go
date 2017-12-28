@@ -16,16 +16,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/microcosm-cc/bluemonday"
-	"golang.org/x/net/html/charset"
-	"golang.org/x/text/transform"
-	"gopkg.in/editorconfig/editorconfig-core-go.v1"
-
 	"code.gitea.io/gitea/models"
 	"code.gitea.io/gitea/modules/base"
 	"code.gitea.io/gitea/modules/log"
-	"code.gitea.io/gitea/modules/markdown"
+	"code.gitea.io/gitea/modules/markup"
 	"code.gitea.io/gitea/modules/setting"
+
+	"golang.org/x/net/html/charset"
+	"golang.org/x/text/transform"
+	"gopkg.in/editorconfig/editorconfig-core-go.v1"
 )
 
 // NewFuncMap returns functions for injecting to templates
@@ -67,7 +66,6 @@ func NewFuncMap() []template.FuncMap {
 		"AvatarLink":   base.AvatarLink,
 		"Safe":         Safe,
 		"SafeJS":       SafeJS,
-		"Sanitize":     bluemonday.UGCPolicy().Sanitize,
 		"Str2html":     Str2html,
 		"TimeSince":    base.TimeSince,
 		"RawTimeSince": base.RawTimeSince,
@@ -110,7 +108,8 @@ func NewFuncMap() []template.FuncMap {
 		"EscapePound": func(str string) string {
 			return strings.NewReplacer("%", "%25", "#", "%23", " ", "%20", "?", "%3F").Replace(str)
 		},
-		"RenderCommitMessage": RenderCommitMessage,
+		"RenderCommitMessage":     RenderCommitMessage,
+		"RenderCommitMessageLink": RenderCommitMessageLink,
 		"ThemeColorMetaTag": func() string {
 			return setting.UI.ThemeColorMetaTag
 		},
@@ -155,6 +154,14 @@ func NewFuncMap() []template.FuncMap {
 			}
 			return out.String()
 		},
+		"DisableGitHooks": func() bool {
+			return setting.DisableGitHooks
+		},
+		"TrN": TrN,
+		// TODO: Remove this once go-ini parser supports unescaping comment characters
+		"UnescapeLocale": func(str string) string {
+			return strings.NewReplacer("\\;", ";", "\\#", "#").Replace(str)
+		},
 	}}
 }
 
@@ -170,7 +177,7 @@ func SafeJS(raw string) template.JS {
 
 // Str2html render Markdown text to HTML
 func Str2html(raw string) template.HTML {
-	return template.HTML(markdown.Sanitize(raw))
+	return template.HTML(markup.Sanitize(raw))
 }
 
 // List traversings the list
@@ -248,33 +255,36 @@ func ReplaceLeft(s, old, new string) string {
 }
 
 // RenderCommitMessage renders commit message with XSS-safe and special links.
-func RenderCommitMessage(full bool, msg, urlPrefix string, metas map[string]string) template.HTML {
+func RenderCommitMessage(msg, urlPrefix string, metas map[string]string) template.HTML {
+	return renderCommitMessage(msg, markup.RenderIssueIndexPatternOptions{
+		URLPrefix: urlPrefix,
+		Metas:     metas,
+	})
+}
+
+// RenderCommitMessageLink renders commit message as a XXS-safe link to the provided
+// default url, handling for special links.
+func RenderCommitMessageLink(msg, urlPrefix string, urlDefault string, metas map[string]string) template.HTML {
+	return renderCommitMessage(msg, markup.RenderIssueIndexPatternOptions{
+		DefaultURL: urlDefault,
+		URLPrefix:  urlPrefix,
+		Metas:      metas,
+	})
+}
+
+func renderCommitMessage(msg string, opts markup.RenderIssueIndexPatternOptions) template.HTML {
 	cleanMsg := template.HTMLEscapeString(msg)
-	fullMessage := string(markdown.RenderIssueIndexPattern([]byte(cleanMsg), urlPrefix, metas))
+	fullMessage := string(markup.RenderIssueIndexPattern([]byte(cleanMsg), opts))
 	msgLines := strings.Split(strings.TrimSpace(fullMessage), "\n")
-	numLines := len(msgLines)
-	if numLines == 0 {
+	if len(msgLines) == 0 {
 		return template.HTML("")
-	} else if !full {
-		return template.HTML(msgLines[0])
-	} else if numLines == 1 || (numLines >= 2 && len(msgLines[1]) == 0) {
-		// First line is a header, standalone or followed by empty line
-		header := fmt.Sprintf("<h3>%s</h3>", msgLines[0])
-		if numLines >= 2 {
-			fullMessage = header + fmt.Sprintf("\n<pre>%s</pre>", strings.Join(msgLines[2:], "\n"))
-		} else {
-			fullMessage = header
-		}
-	} else {
-		// Non-standard git message, there is no header line
-		fullMessage = fmt.Sprintf("<h4>%s</h4>", strings.Join(msgLines, "<br>"))
 	}
-	return template.HTML(fullMessage)
+	return template.HTML(msgLines[0])
 }
 
 // Actioner describes an action
 type Actioner interface {
-	GetOpType() int
+	GetOpType() models.ActionType
 	GetActUserName() string
 	GetRepoUserName() string
 	GetRepoName() string
@@ -286,25 +296,24 @@ type Actioner interface {
 	GetIssueInfos() []string
 }
 
-// ActionIcon accepts a int that represents action operation type
-// and returns a icon class name.
-func ActionIcon(opType int) string {
+// ActionIcon accepts an action operation type and returns an icon class name.
+func ActionIcon(opType models.ActionType) string {
 	switch opType {
-	case 1, 8: // Create and transfer repository
+	case models.ActionCreateRepo, models.ActionTransferRepo:
 		return "repo"
-	case 5, 9: // Commit repository
+	case models.ActionCommitRepo, models.ActionPushTag, models.ActionDeleteTag, models.ActionDeleteBranch:
 		return "git-commit"
-	case 6: // Create issue
+	case models.ActionCreateIssue:
 		return "issue-opened"
-	case 7: // New pull request
+	case models.ActionCreatePullRequest:
 		return "git-pull-request"
-	case 10: // Comment issue
+	case models.ActionCommentIssue:
 		return "comment-discussion"
-	case 11: // Merge pull request
+	case models.ActionMergePullRequest:
 		return "git-merge"
-	case 12, 14: // Close issue or pull request
+	case models.ActionCloseIssue, models.ActionClosePullRequest:
 		return "issue-closed"
-	case 13, 15: // Reopen issue or pull request
+	case models.ActionReopenIssue, models.ActionReopenPullRequest:
 		return "issue-reopened"
 	default:
 		return "invalid type"
@@ -339,4 +348,61 @@ func DiffLineTypeToStr(diffType int) string {
 		return "tag"
 	}
 	return "same"
+}
+
+// Language specific rules for translating plural texts
+var trNLangRules = map[string]func(int64) int{
+	"en-US": func(cnt int64) int {
+		if cnt == 1 {
+			return 0
+		}
+		return 1
+	},
+	"lv-LV": func(cnt int64) int {
+		if cnt%10 == 1 && cnt%100 != 11 {
+			return 0
+		}
+		return 1
+	},
+	"ru-RU": func(cnt int64) int {
+		if cnt%10 == 1 && cnt%100 != 11 {
+			return 0
+		}
+		return 1
+	},
+	"zh-CN": func(cnt int64) int {
+		return 0
+	},
+	"zh-HK": func(cnt int64) int {
+		return 0
+	},
+	"zh-TW": func(cnt int64) int {
+		return 0
+	},
+}
+
+// TrN returns key to be used for plural text translation
+func TrN(lang string, cnt interface{}, key1, keyN string) string {
+	var c int64
+	if t, ok := cnt.(int); ok {
+		c = int64(t)
+	} else if t, ok := cnt.(int16); ok {
+		c = int64(t)
+	} else if t, ok := cnt.(int32); ok {
+		c = int64(t)
+	} else if t, ok := cnt.(int64); ok {
+		c = t
+	} else {
+		return keyN
+	}
+
+	ruleFunc, ok := trNLangRules[lang]
+	if !ok {
+		ruleFunc = trNLangRules["en-US"]
+	}
+
+	if ruleFunc(c) == 0 {
+		return key1
+	}
+	return keyN
 }

@@ -13,7 +13,9 @@ import (
 	"code.gitea.io/gitea/models"
 	"code.gitea.io/gitea/modules/base"
 	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/setting"
+
 	"github.com/Unknwon/paginater"
 )
 
@@ -51,8 +53,9 @@ func Commits(ctx *context.Context) {
 		ctx.Handle(404, "Commit not found", nil)
 		return
 	}
+	ctx.Data["PageIsViewCode"] = true
 
-	commitsCount, err := ctx.Repo.Commit.CommitsCount()
+	commitsCount, err := ctx.Repo.GetCommitsCount()
 	if err != nil {
 		ctx.Handle(500, "GetCommitsCount", err)
 		return
@@ -86,8 +89,9 @@ func Commits(ctx *context.Context) {
 // Graph render commit graph - show commits from all branches.
 func Graph(ctx *context.Context) {
 	ctx.Data["PageIsCommits"] = true
+	ctx.Data["PageIsViewCode"] = true
 
-	commitsCount, err := ctx.Repo.Commit.CommitsCount()
+	commitsCount, err := ctx.Repo.GetCommitsCount()
 	if err != nil {
 		ctx.Handle(500, "GetCommitsCount", err)
 		return
@@ -112,10 +116,11 @@ func Graph(ctx *context.Context) {
 // SearchCommits render commits filtered by keyword
 func SearchCommits(ctx *context.Context) {
 	ctx.Data["PageIsCommits"] = true
+	ctx.Data["PageIsViewCode"] = true
 
 	keyword := strings.Trim(ctx.Query("q"), " ")
 	if len(keyword) == 0 {
-		ctx.Redirect(ctx.Repo.RepoLink + "/commits/" + ctx.Repo.BranchName)
+		ctx.Redirect(ctx.Repo.RepoLink + "/commits/" + ctx.Repo.BranchNameSubURL())
 		return
 	}
 	all := ctx.QueryBool("all")
@@ -208,6 +213,14 @@ func Diff(ctx *context.Context) {
 	if len(commitID) != 40 {
 		commitID = commit.ID.String()
 	}
+
+	statuses, err := models.GetLatestCommitStatus(ctx.Repo.Repository, ctx.Repo.Commit.ID.String(), 0)
+	if err != nil {
+		log.Error(3, "GetLatestCommitStatus: %v", err)
+	}
+
+	ctx.Data["CommitStatus"] = models.CalcCommitStatus(statuses)
+
 	diff, err := models.GetDiffCommit(models.RepoPath(userName, repoName),
 		commitID, setting.Git.MaxGitDiffLines,
 		setting.Git.MaxGitDiffLineCharacters, setting.Git.MaxGitDiffFiles)
@@ -237,11 +250,11 @@ func Diff(ctx *context.Context) {
 	ctx.Data["Diff"] = diff
 	ctx.Data["Parents"] = parents
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
-	ctx.Data["SourcePath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "src", commitID)
+	ctx.Data["SourcePath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "src", "commit", commitID)
 	if commit.ParentCount() > 0 {
-		ctx.Data["BeforeSourcePath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "src", parents[0])
+		ctx.Data["BeforeSourcePath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "src", "commit", parents[0])
 	}
-	ctx.Data["RawPath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "raw", commitID)
+	ctx.Data["RawPath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "raw", "commit", commitID)
 	ctx.HTML(200, tplDiff)
 }
 
@@ -302,9 +315,9 @@ func CompareDiff(ctx *context.Context) {
 	ctx.Data["Commit"] = commit
 	ctx.Data["Diff"] = diff
 	ctx.Data["DiffNotAvailable"] = diff.NumFiles() == 0
-	ctx.Data["SourcePath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "src", afterCommitID)
-	ctx.Data["BeforeSourcePath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "src", beforeCommitID)
-	ctx.Data["RawPath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "raw", afterCommitID)
+	ctx.Data["SourcePath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "src", "commit", afterCommitID)
+	ctx.Data["BeforeSourcePath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "src", "commit", beforeCommitID)
+	ctx.Data["RawPath"] = setting.AppSubURL + "/" + path.Join(userName, repoName, "raw", "commit", afterCommitID)
 	ctx.Data["RequireHighlightJS"] = true
 	ctx.HTML(200, tplDiff)
 }
