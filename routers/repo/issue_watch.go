@@ -21,7 +21,7 @@ func IssueWatch(c *context.Context) {
 		return
 	}
 
-	issue := getActionIssue(c)
+	issue := GetActionIssue(c)
 	if c.Written() {
 		return
 	}

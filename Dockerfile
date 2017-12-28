@@ -1,5 +1,6 @@
-FROM alpine:3.5
-MAINTAINER Thomas Boerger <thomas@webhippie.de>
+FROM alpine:3.6
+
+LABEL maintainer="The Gitea Authors"
 
 EXPOSE 22 3000
 
@@ -13,6 +14,7 @@ RUN apk --no-cache add \
     s6 \
     curl \
     openssh \
+    gettext \
     tzdata
 RUN addgroup \
     -S -g 1000 \

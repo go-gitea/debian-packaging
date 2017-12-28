@@ -20,6 +20,7 @@ import (
 	"code.gitea.io/gitea/modules/context"
 	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/setting"
+	"code.gitea.io/gitea/modules/util"
 )
 
 const (
@@ -31,6 +32,21 @@ const (
 func MustBeNotBare(ctx *context.Context) {
 	if ctx.Repo.Repository.IsBare {
 		ctx.Handle(404, "MustBeNotBare", nil)
+	}
+}
+
+// MustBeEditable check that repo can be edited
+func MustBeEditable(ctx *context.Context) {
+	if !ctx.Repo.Repository.CanEnableEditor() || ctx.Repo.IsViewCommit {
+		ctx.Handle(404, "", nil)
+		return
+	}
+}
+
+// MustBeAbleToUpload check that repo can be uploaded to
+func MustBeAbleToUpload(ctx *context.Context) {
+	if !setting.Repository.Upload.Enabled {
+		ctx.Handle(404, "", nil)
 	}
 }
 
@@ -127,7 +143,7 @@ func CreatePost(ctx *context.Context, form auth.CreateRepoForm) {
 		return
 	}
 
-	repo, err := models.CreateRepository(ctxUser, models.CreateRepoOptions{
+	repo, err := models.CreateRepository(ctx.User, ctxUser, models.CreateRepoOptions{
 		Name:        form.RepoName,
 		Description: form.Description,
 		Gitignores:  form.Gitignores,
@@ -143,7 +159,7 @@ func CreatePost(ctx *context.Context, form auth.CreateRepoForm) {
 	}
 
 	if repo != nil {
-		if errDelete := models.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
+		if errDelete := models.DeleteRepository(ctx.User, ctxUser.ID, repo.ID); errDelete != nil {
 			log.Error(4, "DeleteRepository: %v", errDelete)
 		}
 	}
@@ -204,7 +220,7 @@ func MigratePost(ctx *context.Context, form auth.MigrateRepoForm) {
 		return
 	}
 
-	repo, err := models.MigrateRepository(ctxUser, models.MigrateRepoOptions{
+	repo, err := models.MigrateRepository(ctx.User, ctxUser, models.MigrateRepoOptions{
 		Name:        form.RepoName,
 		Description: form.Description,
 		IsPrivate:   form.Private || setting.Repository.ForcePrivate,
@@ -217,8 +233,11 @@ func MigratePost(ctx *context.Context, form auth.MigrateRepoForm) {
 		return
 	}
 
+	// remoteAddr may contain credentials, so we sanitize it
+	err = util.URLSanitizedError(err, remoteAddr)
+
 	if repo != nil {
-		if errDelete := models.DeleteRepository(ctxUser.ID, repo.ID); errDelete != nil {
+		if errDelete := models.DeleteRepository(ctx.User, ctxUser.ID, repo.ID); errDelete != nil {
 			log.Error(4, "DeleteRepository: %v", errDelete)
 		}
 	}
@@ -226,11 +245,11 @@ func MigratePost(ctx *context.Context, form auth.MigrateRepoForm) {
 	if strings.Contains(err.Error(), "Authentication failed") ||
 		strings.Contains(err.Error(), "could not read Username") {
 		ctx.Data["Err_Auth"] = true
-		ctx.RenderWithErr(ctx.Tr("form.auth_failed", models.HandleCloneUserCredentials(err.Error(), true)), tplMigrate, &form)
+		ctx.RenderWithErr(ctx.Tr("form.auth_failed", err.Error()), tplMigrate, &form)
 		return
 	} else if strings.Contains(err.Error(), "fatal:") {
 		ctx.Data["Err_CloneAddr"] = true
-		ctx.RenderWithErr(ctx.Tr("repo.migrate.failed", models.HandleCloneUserCredentials(err.Error(), true)), tplMigrate, &form)
+		ctx.RenderWithErr(ctx.Tr("repo.migrate.failed", err.Error()), tplMigrate, &form)
 		return
 	}
 
