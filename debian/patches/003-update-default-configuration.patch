@@ -21,7 +21,7 @@ Forwarded: not-needed
  SCRIPT_TYPE = bash
  ; Default ANSI charset
  ANSI_CHARSET =
-@@ -34,13 +34,13 @@
+@@ -36,13 +36,13 @@
  
  [repository.local]
  ; Path for uploads. Defaults to `tmp/local-repo`
@@ -37,7 +37,7 @@ Forwarded: not-needed
  ; One or more allowed types, e.g. image/jpeg|image/png. Nothing means any file type
  ALLOWED_TYPES =
  ; Max size of each file in MB. Defaults to 3MB
-@@ -146,9 +146,9 @@
+@@ -159,9 +159,9 @@
  KEY_FILE = custom/https/key.pem
  ; Upper level of template and static file path
  ; default is the path where Gitea is executed
@@ -49,7 +49,7 @@ Forwarded: not-needed
  ; Application level GZIP support
  ENABLE_GZIP = false
  ; Landing page for non-logged users, can be "home" or "explore"
-@@ -156,7 +156,7 @@
+@@ -169,7 +169,7 @@
  ; Enables git-lfs support. true or false, default is false.
  LFS_START_SERVER = false
  ; Where your lfs files put on, default is data/lfs.
@@ -58,7 +58,7 @@ Forwarded: not-needed
  ; LFS authentication secret, changed this to yourself.
  LFS_JWT_SECRET   =
  
-@@ -169,7 +169,7 @@
+@@ -182,7 +182,7 @@
  
  [database]
  ; Either "mysql", "postgres", "mssql" or "sqlite3", it's your choice
@@ -67,7 +67,7 @@ Forwarded: not-needed
  HOST = 127.0.0.1:3306
  NAME = gitea
  USER = root
-@@ -177,7 +177,7 @@
+@@ -190,7 +190,7 @@
  ; For "postgres" only, either "disable", "require" or "verify-full"
  SSL_MODE = disable
  ; For "sqlite3" and "tidb", use absolute path when you start as service
@@ -75,8 +75,8 @@ Forwarded: not-needed
 +PATH = /var/lib/gitea/data/gitea.db
  ; For "sqlite3" only. Query timeout
  SQLITE_TIMEOUT = 500
- 
-@@ -191,9 +191,9 @@
+ ; For iterate buffer, default is 50
+@@ -210,9 +210,9 @@
  
  [security]
  ; Whether the installer is disabled
@@ -88,7 +88,7 @@ Forwarded: not-needed
  ; Auto-login remember days
  LOGIN_REMEMBER_DAYS = 7
  COOKIE_USERNAME = gitea_awesome
-@@ -329,7 +329,7 @@
+@@ -361,7 +361,7 @@
  ; file: session file path, e.g. `data/sessions`
  ; redis: network=tcp,addr=:6379,password=macaron,db=0,pool_size=100,idle_timeout=180
  ; mysql: go-sql-driver/mysql dsn config string, e.g. `root:password@/session_table`
@@ -97,7 +97,7 @@ Forwarded: not-needed
  ; Session cookie name
  COOKIE_NAME = i_like_gitea
  ; If you use session in https only, default is false
-@@ -342,7 +342,7 @@
+@@ -374,7 +374,7 @@
  SESSION_LIFE_TIME = 86400
  
  [picture]
@@ -106,7 +106,7 @@ Forwarded: not-needed
  ; Chinese users can choose "duoshuo"
  ; or a custom avatar source, like: http://cn.gravatar.com/avatar/
  GRAVATAR_SOURCE = gravatar
-@@ -357,7 +357,7 @@
+@@ -389,7 +389,7 @@
  ; Whether attachments are enabled. Defaults to `true`
  ENABLE = true
  ; Path for attachments. Defaults to `data/attachments`
@@ -115,7 +115,7 @@ Forwarded: not-needed
  ; One or more allowed types, e.g. image/jpeg|image/png
  ALLOWED_TYPES = image/jpeg|image/png|application/zip|application/gzip
  ; Max size of each file. Defaults to 32MB
-@@ -372,24 +372,24 @@
+@@ -404,24 +404,24 @@
  FORMAT =
  
  [log]

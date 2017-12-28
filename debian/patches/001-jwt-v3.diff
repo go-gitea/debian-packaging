@@ -12,10 +12,10 @@ Debian maintains a versioned name of this package.
  
 --- a/modules/lfs/server.go
 +++ b/modules/lfs/server.go
-@@ -15,7 +15,7 @@
- 	"code.gitea.io/gitea/modules/context"
+@@ -17,7 +17,7 @@
  	"code.gitea.io/gitea/modules/log"
  	"code.gitea.io/gitea/modules/setting"
+ 
 -	"github.com/dgrijalva/jwt-go"
 +	"github.com/dgrijalva/jwt-go-v3"
  	"gopkg.in/macaron.v1"
