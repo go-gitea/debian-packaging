@@ -4,6 +4,7 @@ Source: https://github.com/go-gitea/gitea
 Files-Excluded: public/vendor/assets
                 public/vendor/plugins
                 vendor
+Comment: See debian/missing-libs for "contrib" justification.
 
 Files: *
 Copyright: 2016 The Gitea Authors
@@ -15,6 +16,14 @@ Files: debian/*
 Copyright: 2017 Michael Lustfield <michael@lustfield.net>
 License: Expat
 Comment: Debian packaging is licensed under the same terms as upstream
+
+Files: debian/missing-libs/vue/*
+Copyright: 2013-2017 Yuxi (Evan) You
+License: Expat
+
+Files: debian/missing-libs/semanticui/*
+Copyright: semantic-ui.com
+License: Expat
 
 License: Expat
  Permission is hereby granted, free of charge, to any person obtaining a copy

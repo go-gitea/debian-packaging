@@ -1,5 +1,5 @@
 Source: gitea
-Section: devel
+Section: contrib/devel
 Priority: extra
 Maintainer: Debian Go Packaging Team <pkg-go-maintainers@lists.alioth.debian.org>
 Uploaders: Michael Lustfield <michael@lustfield.net>
