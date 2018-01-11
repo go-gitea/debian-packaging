@@ -1,8 +1,8 @@
-gitea (1.3.2+dfsg-2) UNRELEASED; urgency=medium
+gitea (1.3.2+dfsg-2) unstable; urgency=medium
 
   * Remove install deps for non-dfsg copies.
 
- -- Michael Lustfield <michael@lustfield.net>  Wed, 10 Jan 2018 21:36:31 -0600
+ -- Michael Lustfield <michael@lustfield.net>  Wed, 10 Jan 2018 21:37:44 -0600
 
 gitea (1.3.2+dfsg-1) unstable; urgency=medium
 
