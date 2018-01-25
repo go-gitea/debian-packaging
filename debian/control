@@ -134,8 +134,8 @@ Build-Depends: debhelper (>= 10),
                python
 Standards-Version: 4.1.1
 Homepage: https://github.com/go-gitea/gitea
-Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/gitea.git
-Vcs-Git: https://anonscm.debian.org/git/pkg-go/packages/gitea.git
+Vcs-Browser: https://anonscm.debian.org/cgit/pkg-go/packages/golang-code.gitea-gitea.git
+Vcs-Git: https://anonscm.debian.org/git/pkg-go/packages/golang-code.gitea-gitea.git
 Testsuite: autopkgtest-pkg-go
 XS-Go-Import-Path: code.gitea.io/gitea
 
