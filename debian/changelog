@@ -1,3 +1,9 @@
+gitea (1.3.2+dfsg-4) UNRELEASED; urgency=medium
+
+  * Point Vcs-* urls to salsa.debian.org.
+
+ -- Alexandre Viau <aviau@debian.org>  Mon, 02 Apr 2018 13:29:05 -0400
+
 gitea (1.3.2+dfsg-3) unstable; urgency=medium
 
   * Update d/control with correct repository location.
