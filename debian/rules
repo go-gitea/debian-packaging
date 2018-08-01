@@ -13,7 +13,7 @@ export GOPATH LDFLAGS TAGS
 %:
 	dh $@ --buildsystem=golang --with=golang
 
-override_dh_auto_build: static_swagger
+override_dh_auto_build: #static_swagger
 	#go install -v -p 1 \#
 	go install -p 4 \
 		-buildmode=pie \

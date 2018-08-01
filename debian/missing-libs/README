@@ -1,5 +1,0 @@
-The libraries included here are required for gitea to function
-but not currently distributed in Debian.
-
-- Semantic-UI: https://bugs.debian.org/871462
-- Vue.js: https://bugs.debian.org/871459

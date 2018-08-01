@@ -1,0 +1,17 @@
+Contrib Reasoning
+-----------------
+
+The libraries included here are required for gitea to function
+but not currently distributed in Debian.
+
+- Semantic-UI: https://bugs.debian.org/871462
+- Vue.js: https://bugs.debian.org/871459
+
+Non-free Reasoning
+------------------
+
+The volume of dependencies is too much for a single person to handle. The packages
+that once existed have mostly been removed from Debian due to auto-QA processes.
+
+This packaging now utilizes what's included in vendor directories which means
+DFSG-freeness cannot be assured, despite attempts to remove problematic sources.

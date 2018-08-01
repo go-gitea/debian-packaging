@@ -1,8 +1,12 @@
-gitea (1.3.2+dfsg-4) UNRELEASED; urgency=medium
+gitea (1.3.2+dfsg-5) UNRELEASED; urgency=medium
 
+  [ Michael Lustfield ]
+  * Modified package for non-free build.
+
+  [ Alexandre Viau ]
   * Point Vcs-* urls to salsa.debian.org.
 
- -- Alexandre Viau <aviau@debian.org>  Mon, 02 Apr 2018 13:29:05 -0400
+ -- Michael Lustfield <michael@lustfield.net>  Wed, 01 Aug 2018 13:47:39 -0500
 
 gitea (1.3.2+dfsg-3) unstable; urgency=medium
 

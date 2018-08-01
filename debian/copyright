@@ -1,10 +1,7 @@
 Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: gitea
 Source: https://github.com/go-gitea/gitea
-Files-Excluded: public/vendor/assets
-                public/vendor/plugins
-                vendor
-Comment: See debian/missing-libs for "contrib" justification.
+Comment: See debian/missing-libs.README for "contrib/non-free" justification.
 
 Files: *
 Copyright: 2016 The Gitea Authors
@@ -22,17 +19,14 @@ Copyright: 2015 Daniel Theophanes
 License: Zlib
 
 Files: debian/*
-Copyright: 2017 Michael Lustfield <michael@lustfield.net>
+Copyright: 2017-2018 Michael Lustfield <michael@lustfield.net>
 License: Expat
 Comment: Debian packaging is licensed under the same terms as upstream
 
-Files: debian/missing-libs/vue/*
-Copyright: 2013-2017 Yuxi (Evan) You
-License: Expat
-
-Files: debian/missing-libs/semanticui/*
-Copyright: semantic-ui.com
-License: Expat
+Files: public/vendor/assets/* public/vendor/plugins/* vendor/*
+Copyright: Multiple holders
+License: Multiple (probably) DFSG-free licenses
+Comment: Package transitioned to non-free due to maintenance burdens on solo maintainer.
 
 License: Expat
  Permission is hereby granted, free of charge, to any person obtaining a copy

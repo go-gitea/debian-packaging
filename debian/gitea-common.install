@@ -1,8 +1,3 @@
 options/locale usr/share/gitea/conf
 public usr/share/gitea
 templates usr/share/gitea
-# Non-DFSG Library Inclusion
-debian/missing-libs/vue/vue.min.js usr/share/gitea/public/vendor/plugins/vue
-debian/missing-libs/semanticui/semantic.min.css usr/share/gitea/public/vendor/plugins/semantic
-debian/missing-libs/semanticui/semantic.min.js usr/share/gitea/public/vendor/plugins/semantic
-debian/missing-libs/semanticui/themes usr/share/gitea/public/vendor/plugins/semantic
