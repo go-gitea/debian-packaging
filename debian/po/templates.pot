@@ -1,15 +1,15 @@
-# Gitea debconf translations.
-# Copyright (C) 2017 Michael Lustfield
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the gitea package.
-# Michael Lustfield <mtecknology@debian.org>, 2017.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
 "Project-Id-Version: gitea\n"
 "Report-Msgid-Bugs-To: gitea@packages.debian.org\n"
-"POT-Creation-Date: 2017-07-30 20:55-0500\n"
-"PO-Revision-Date: 2017-07-30 20:50-0500\n"
+"POT-Creation-Date: 2018-08-01 22:18-0500\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
@@ -28,5 +28,21 @@ msgstr ""
 #: ../gitea.templates:1001
 msgid ""
 "This is the global secret key used for server security. After initial "
-"configuration, this value will be removed from the debconf database."
+"configuration, this value will be removed from the debconf database. Leave "
+"blank to use a generated password."
+msgstr ""
+
+#. Type: password
+#. Description
+#: ../gitea.templates:2001
+msgid "Global internal token for gitea:"
+msgstr ""
+
+#. Type: password
+#. Description
+#: ../gitea.templates:2001
+msgid ""
+"This is the global internal token used for server security. After initial "
+"configuration, this value will be removed from the debconf database. Leave "
+"blank to use a generated password."
 msgstr ""

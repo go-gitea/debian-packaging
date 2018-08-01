@@ -1,0 +1,7 @@
+Bug-Database: https://github.com/go-gitea/gitea/issues
+Bug-Submit: https://github.com/go-gitea/gitea/issues/new
+Changelog: https://github.com/go-gitea/gitea/blob/master/CHANGELOG.md
+Documentation: https://docs.gitea.io/en-us/
+Name: gitea
+Repository: https://github.com/go-gitea/gitea.git
+Repository-Browse: https://github.com/go-gitea/gitea

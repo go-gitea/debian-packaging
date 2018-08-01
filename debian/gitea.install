@@ -1,2 +1,2 @@
-conf/app.ini etc/gitea/conf
+debian/conf/app.ini etc/gitea/conf
 usr/bin/gitea

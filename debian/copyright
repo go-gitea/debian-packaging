@@ -1,4 +1,4 @@
-Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: gitea
 Source: https://github.com/go-gitea/gitea
 Comment: See debian/missing-libs.README for "contrib/non-free" justification.
@@ -25,8 +25,14 @@ Comment: Debian packaging is licensed under the same terms as upstream
 
 Files: public/vendor/assets/* public/vendor/plugins/* vendor/*
 Copyright: Multiple holders
-License: Multiple (probably) DFSG-free licenses
+License: many-licenses
 Comment: Package transitioned to non-free due to maintenance burdens on solo maintainer.
+
+License: many-licenses
+ Included libraries in vendor directories are licensed under multiple DFSG-free
+ licenses. Best effort is put forward to keep track of them all and ensure no
+ unlicensed or non-free 3rd party modules are included. However, it is quite
+ difficult to keep up with an upstream that does not care.
 
 License: Expat
  Permission is hereby granted, free of charge, to any person obtaining a copy

@@ -1,0 +1,9 @@
+# Extra license files are for 3rd party (vendor) libraries [non-DFSG]
+gitea-common: extra-license-file
+# This goes away when the vendor libs go away. [non-DFSG]
+gitea-common: duplicate-font-file
+gitea-common: font-in-non-font-package
+gitea-common: privacy-breach-uses-embedded-file
+gitea-common: privacy-breach-generic
+gitea-common: embedded-javascript-library
+gitea-common: package-contains-vcs-control-file

@@ -31,7 +31,7 @@ case "$1" in
             if [ -d /var/lib/gitea ]; then
                 chown gitea:gitea /var/lib/gitea
                 chown gitea:gitea /var/lib/gitea/*
-		chown gitea:gitea /etc/gitea/conf
+                chown gitea:gitea /etc/gitea/conf
             fi
         fi
 
@@ -39,9 +39,29 @@ case "$1" in
         if grep -q 'Xx-secret-key-xX' /etc/gitea/conf/app.ini; then
             db_get gitea/secret-key || true
             _SK=$(echo "$RET" | sed -e 's/[]\/$*.^|[]/\\&/g')
-            [ -n "$_SK" ] || _SK=$(date +%s%Z%N | sha256sum | base64 | head -c 14)
+            [ -n "$_SK" ] || _SK=$(date +%s%Z%N | sha256sum | base64 -w 14 | head -c 14)
             sed -i "s/Xx-secret-key-xX/$_SK/" /etc/gitea/conf/app.ini
             db_clear gitea/secret-key || true
+            db_go
+        fi
+
+        # Set a unique internal token if one hasn't been provided
+        if grep -q 'Xx-internal-token-xX' /etc/gitea/conf/app.ini; then
+            db_get gitea/internal-token || true
+            _SK=$(echo "$RET" | sed -e 's/[]\/$*.^|[]/\\&/g')
+            [ -n "$_SK" ] || _SK=$(date +%s%Z%N | sha512sum | base64 -w 120 | head -c 120)
+            sed -i "s/Xx-internal-token-xX/$_SK/" /etc/gitea/conf/app.ini
+            db_clear gitea/internal-token || true
+            db_go
+        fi
+
+        # Set a unique lfs secret if one hasn't been provided
+        if grep -q 'Xx-lfs-secret-xX' /etc/gitea/conf/app.ini; then
+            db_get gitea/lfs-secret || true
+            _SK=$(echo "$RET" | sed -e 's/[]\/$*.^|[]/\\&/g')
+            [ -n "$_SK" ] || _SK=$(date +%s%Z%N | sha384sum | base64 -w 32 | head -c 32)
+            sed -i "s/Xx-lfs-secret-xX/$_SK/" /etc/gitea/conf/app.ini
+            db_clear gitea/lfs-secret || true
             db_go
         fi
         ;;

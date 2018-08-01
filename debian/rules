@@ -6,9 +6,10 @@ TAGS := sqlite pam
 
 # PIE builds (-buildmode=pie) need -pkgdir (abs path ref)
 GOPATH ?= $(CURDIR)/obj-$(DEB_TARGET_GNU_TYPE)
+GOCACHE ?= $(CURDIR)/.cache
 LDFLAGS = -X 'main.Tags=$(TAGS)' -extldflags=-Wl,-z,relro,-z,now
 
-export GOPATH LDFLAGS TAGS
+export GOPATH GOCACHE LDFLAGS TAGS
 
 %:
 	dh $@ --buildsystem=golang --with=golang

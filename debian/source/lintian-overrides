@@ -1,6 +1,7 @@
-# options/license/* are license copies that do not apply to this project
-gitea source: license-problem-json-evil options/license/JSON
-gitea source: license-problem-php-license
-
 # upstream does not sign releases
-gitea source: debian-watch-may-check-gpg-signature
+gitea source: debian-watch-does-not-check-gpg-signature
+
+# Reasons this package is currently in non-free
+gitea source: source-contains-prebuilt-javascript-object
+# Patches are needed for using packaged dependencies
+gitea source: patch-file-present-but-not-mentioned-in-series
