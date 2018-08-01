@@ -55,6 +55,16 @@ pipeline:
     when:
       event: [ push, tag, pull_request ]
 
+  build-without-gcc:
+    image: webhippie/golang:1.8
+    pull: true
+    environment:
+      GOPATH: /srv/app
+    commands:
+      - go build -o gitea_no_gcc # test if build succeeds without the sqlite tag
+    when:
+      event: [ push, tag, pull_request ]
+
   build:
     image: webhippie/golang:edge
     pull: true
@@ -192,6 +202,39 @@ pipeline:
       - make release
     when:
       event: [ push, tag ]
+
+  build_docs:
+    image: webhippie/hugo:latest
+    pull: true
+    commands:
+      - cd docs
+      - make trans-copy
+      - make clean
+      - make build
+
+  docker_docs:
+    image: plugins/docker:17.05
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    repo: gitea/docs
+    context: docs
+    dockerfile: docs/Dockerfile
+    tags: [ '${DRONE_BRANCH##release/v}' ]
+    when:
+      event: [ push ]
+      branch: [ release/* ]
+
+  docker_docs:
+    image: plugins/docker:17.05
+    pull: true
+    secrets: [ docker_username, docker_password ]
+    repo: gitea/docs
+    context: docs
+    dockerfile: docs/Dockerfile
+    tags: [ 'latest' ]
+    when:
+      event: [ push ]
+      branch: [ master ]
 
   docker:
     image: plugins/docker:17.05

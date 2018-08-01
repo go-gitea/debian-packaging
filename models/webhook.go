@@ -17,8 +17,10 @@ import (
 	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/setting"
 	"code.gitea.io/gitea/modules/sync"
+	"code.gitea.io/gitea/modules/util"
 	api "code.gitea.io/sdk/gitea"
 
+	"github.com/Unknwon/com"
 	gouuid "github.com/satori/go.uuid"
 )
 
@@ -105,10 +107,8 @@ type Webhook struct {
 	Meta         string     `xorm:"TEXT"` // store hook-specific attributes
 	LastStatus   HookStatus // Last delivery status
 
-	Created     time.Time `xorm:"-"`
-	CreatedUnix int64     `xorm:"INDEX created"`
-	Updated     time.Time `xorm:"-"`
-	UpdatedUnix int64     `xorm:"INDEX updated"`
+	CreatedUnix util.TimeStamp `xorm:"INDEX created"`
+	UpdatedUnix util.TimeStamp `xorm:"INDEX updated"`
 }
 
 // AfterLoad updates the webhook object upon setting a column
@@ -117,9 +117,6 @@ func (w *Webhook) AfterLoad() {
 	if err := json.Unmarshal([]byte(w.Events), w.HookEvent); err != nil {
 		log.Error(3, "Unmarshal[%d]: %v", w.ID, err)
 	}
-
-	w.Created = time.Unix(w.CreatedUnix, 0).Local()
-	w.Updated = time.Unix(w.UpdatedUnix, 0).Local()
 }
 
 // GetSlackHook returns slack metadata
@@ -332,13 +329,15 @@ const (
 	SLACK
 	GITEA
 	DISCORD
+	DINGTALK
 )
 
 var hookTaskTypes = map[string]HookTaskType{
-	"gitea":   GITEA,
-	"gogs":    GOGS,
-	"slack":   SLACK,
-	"discord": DISCORD,
+	"gitea":    GITEA,
+	"gogs":     GOGS,
+	"slack":    SLACK,
+	"discord":  DISCORD,
+	"dingtalk": DINGTALK,
 }
 
 // ToHookTaskType returns HookTaskType by given name.
@@ -357,6 +356,8 @@ func (t HookTaskType) Name() string {
 		return "slack"
 	case DISCORD:
 		return "discord"
+	case DINGTALK:
+		return "dingtalk"
 	}
 	return ""
 }
@@ -436,7 +437,14 @@ func (t *HookTask) AfterLoad() {
 
 	t.RequestInfo = &HookRequest{}
 	if err := json.Unmarshal([]byte(t.RequestContent), t.RequestInfo); err != nil {
-		log.Error(3, "Unmarshal[%d]: %v", t.ID, err)
+		log.Error(3, "Unmarshal RequestContent[%d]: %v", t.ID, err)
+	}
+
+	if len(t.ResponseContent) > 0 {
+		t.ResponseInfo = &HookResponse{}
+		if err := json.Unmarshal([]byte(t.ResponseContent), t.ResponseInfo); err != nil {
+			log.Error(3, "Unmarshal ResponseContent[%d]: %v", t.ID, err)
+		}
 	}
 }
 
@@ -520,6 +528,11 @@ func prepareWebhook(e Engine, w *Webhook, repo *Repository, event HookEventType,
 		if err != nil {
 			return fmt.Errorf("GetDiscordPayload: %v", err)
 		}
+	case DINGTALK:
+		payloader, err = GetDingtalkPayload(p, event, w.Meta)
+		if err != nil {
+			return fmt.Errorf("GetDingtalkPayload: %v", err)
+		}
 	default:
 		p.SetSecret(w.Secret)
 		payloader = p
@@ -582,8 +595,8 @@ func (t *HookTask) deliver() {
 		Header("X-Gitea-Event", string(t.EventType)).
 		Header("X-Gogs-Delivery", t.UUID).
 		Header("X-Gogs-Event", string(t.EventType)).
-		Header("X-GitHub-Delivery", t.UUID).
-		Header("X-GitHub-Event", string(t.EventType)).
+		HeaderWithSensitiveCase("X-GitHub-Delivery", t.UUID).
+		HeaderWithSensitiveCase("X-GitHub-Event", string(t.EventType)).
 		SetTLSClientConfig(&tls.Config{InsecureSkipVerify: setting.Webhook.SkipTLSVerify})
 
 	switch t.ContentType {
@@ -611,6 +624,10 @@ func (t *HookTask) deliver() {
 			log.Trace("Hook delivered: %s", t.UUID)
 		} else {
 			log.Trace("Hook delivery failed: %s", t.UUID)
+		}
+
+		if err := UpdateHookTask(t); err != nil {
+			log.Error(4, "UpdateHookTask [%d]: %v", t.ID, err)
 		}
 
 		// Update webhook last delivery status.
@@ -665,16 +682,18 @@ func DeliverHooks() {
 	// Update hook task status.
 	for _, t := range tasks {
 		t.deliver()
-
-		if err := UpdateHookTask(t); err != nil {
-			log.Error(4, "UpdateHookTask [%d]: %v", t.ID, err)
-		}
 	}
 
 	// Start listening on new hook requests.
-	for repoID := range HookQueue.Queue() {
-		log.Trace("DeliverHooks [repo_id: %v]", repoID)
-		HookQueue.Remove(repoID)
+	for repoIDStr := range HookQueue.Queue() {
+		log.Trace("DeliverHooks [repo_id: %v]", repoIDStr)
+		HookQueue.Remove(repoIDStr)
+
+		repoID, err := com.StrTo(repoIDStr).Int64()
+		if err != nil {
+			log.Error(4, "Invalid repo ID: %s", repoIDStr)
+			continue
+		}
 
 		tasks = make([]*HookTask, 0, 5)
 		if err := x.Where("repo_id=? AND is_delivered=?", repoID, false).Find(&tasks); err != nil {
@@ -683,10 +702,6 @@ func DeliverHooks() {
 		}
 		for _, t := range tasks {
 			t.deliver()
-			if err := UpdateHookTask(t); err != nil {
-				log.Error(4, "UpdateHookTask [%d]: %v", t.ID, err)
-				continue
-			}
 		}
 	}
 }

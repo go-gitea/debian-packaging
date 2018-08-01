@@ -68,12 +68,12 @@ type ObjectError struct {
 
 // ObjectLink builds a URL linking to the object.
 func (v *RequestVars) ObjectLink() string {
-	return setting.AppURL + path.Join(v.User, v.Repo, "info/lfs/objects", v.Oid)
+	return setting.AppURL + path.Join(v.User, v.Repo+".git", "info/lfs/objects", v.Oid)
 }
 
 // VerifyLink builds a URL for verifying the object.
 func (v *RequestVars) VerifyLink() string {
-	return setting.AppURL + path.Join(v.User, v.Repo, "info/lfs/verify")
+	return setting.AppURL + path.Join(v.User, v.Repo+".git", "info/lfs/verify")
 }
 
 // link provides a structure used to build a hypermedia representation of an HTTP link.
@@ -82,6 +82,8 @@ type link struct {
 	Header    map[string]string `json:"header,omitempty"`
 	ExpiresAt time.Time         `json:"expires_at,omitempty"`
 }
+
+var oidRegExp = regexp.MustCompile(`^[A-Fa-f0-9]+$`)
 
 // ObjectOidHandler is the main request routing entry point into LFS server functions
 func ObjectOidHandler(ctx *context.Context) {
@@ -108,10 +110,9 @@ func ObjectOidHandler(ctx *context.Context) {
 }
 
 func getAuthenticatedRepoAndMeta(ctx *context.Context, rv *RequestVars, requireWrite bool) (*models.LFSMetaObject, *models.Repository) {
-	repositoryString := rv.User + "/" + rv.Repo
-	repository, err := models.GetRepositoryByRef(repositoryString)
+	repository, err := models.GetRepositoryByOwnerAndName(rv.User, rv.Repo)
 	if err != nil {
-		log.Debug("Could not find repository: %s - %s", repositoryString, err)
+		log.Debug("Could not find repository: %s/%s - %s", rv.User, rv.Repo, err)
 		writeStatus(ctx, 404)
 		return nil, nil
 	}
@@ -197,7 +198,6 @@ func getMetaHandler(ctx *context.Context) {
 
 // PostHandler instructs the client how to upload data
 func PostHandler(ctx *context.Context) {
-
 	if !setting.LFS.StartServer {
 		writeStatus(ctx, 404)
 		return
@@ -210,16 +210,21 @@ func PostHandler(ctx *context.Context) {
 
 	rv := unpack(ctx)
 
-	repositoryString := rv.User + "/" + rv.Repo
-	repository, err := models.GetRepositoryByRef(repositoryString)
+	repository, err := models.GetRepositoryByOwnerAndName(rv.User, rv.Repo)
 	if err != nil {
-		log.Debug("Could not find repository: %s - %s", repositoryString, err)
+		log.Debug("Could not find repository: %s/%s - %s", rv.User, rv.Repo, err)
 		writeStatus(ctx, 404)
 		return
 	}
 
 	if !authenticate(ctx, repository, rv.Authorization, true) {
 		requireAuth(ctx)
+		return
+	}
+
+	if !oidRegExp.MatchString(rv.Oid) {
+		writeStatus(ctx, 404)
+		return
 	}
 
 	meta, err := models.NewLFSMetaObject(&models.LFSMetaObject{Oid: rv.Oid, Size: rv.Size, RepositoryID: repository.ID})
@@ -261,12 +266,10 @@ func BatchHandler(ctx *context.Context) {
 
 	// Create a response object
 	for _, object := range bv.Objects {
-
-		repositoryString := object.User + "/" + object.Repo
-		repository, err := models.GetRepositoryByRef(repositoryString)
+		repository, err := models.GetRepositoryByOwnerAndName(object.User, object.Repo)
 
 		if err != nil {
-			log.Debug("Could not find repository: %s - %s", repositoryString, err)
+			log.Debug("Could not find repository: %s/%s - %s", object.User, object.Repo, err)
 			writeStatus(ctx, 404)
 			return
 		}
@@ -289,10 +292,12 @@ func BatchHandler(ctx *context.Context) {
 			continue
 		}
 
-		// Object is not found
-		meta, err = models.NewLFSMetaObject(&models.LFSMetaObject{Oid: object.Oid, Size: object.Size, RepositoryID: repository.ID})
-		if err == nil {
-			responseObjects = append(responseObjects, Represent(object, meta, meta.Existing, !contentStore.Exists(meta)))
+		if oidRegExp.MatchString(object.Oid) {
+			// Object is not found
+			meta, err = models.NewLFSMetaObject(&models.LFSMetaObject{Oid: object.Oid, Size: object.Size, RepositoryID: repository.ID})
+			if err == nil {
+				responseObjects = append(responseObjects, Represent(object, meta, meta.Existing, !contentStore.Exists(meta)))
+			}
 		}
 	}
 
@@ -478,7 +483,6 @@ func logRequest(r macaron.Request, status int) {
 // authenticate uses the authorization string to determine whether
 // or not to proceed. This server assumes an HTTP Basic auth format.
 func authenticate(ctx *context.Context, repository *models.Repository, authorization string, requireWrite bool) bool {
-
 	accessMode := models.AccessModeRead
 	if requireWrite {
 		accessMode = models.AccessModeWrite
@@ -487,86 +491,92 @@ func authenticate(ctx *context.Context, repository *models.Repository, authoriza
 	if !repository.IsPrivate && !requireWrite {
 		return true
 	}
-
 	if ctx.IsSigned {
 		accessCheck, _ := models.HasAccess(ctx.User.ID, repository, accessMode)
 		return accessCheck
 	}
 
-	if authorization == "" {
+	user, repo, opStr, err := parseToken(authorization)
+	if err != nil {
 		return false
 	}
-
-	if authenticateToken(repository, authorization, requireWrite) {
+	ctx.User = user
+	if opStr == "basic" {
+		accessCheck, _ := models.HasAccess(ctx.User.ID, repository, accessMode)
+		return accessCheck
+	}
+	if repository.ID == repo.ID {
+		if requireWrite && opStr != "upload" {
+			return false
+		}
 		return true
 	}
-
-	if !strings.HasPrefix(authorization, "Basic ") {
-		return false
-	}
-
-	c, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(authorization, "Basic "))
-	if err != nil {
-		return false
-	}
-	cs := string(c)
-	i := strings.IndexByte(cs, ':')
-	if i < 0 {
-		return false
-	}
-	user, password := cs[:i], cs[i+1:]
-
-	userModel, err := models.GetUserByName(user)
-	if err != nil {
-		return false
-	}
-
-	if !userModel.ValidatePassword(password) {
-		return false
-	}
-
-	accessCheck, _ := models.HasAccess(userModel.ID, repository, accessMode)
-	return accessCheck
+	return false
 }
 
-func authenticateToken(repository *models.Repository, authorization string, requireWrite bool) bool {
-	if !strings.HasPrefix(authorization, "Bearer ") {
-		return false
+func parseToken(authorization string) (*models.User, *models.Repository, string, error) {
+	if authorization == "" {
+		return nil, nil, "unknown", fmt.Errorf("No token")
 	}
-
-	token, err := jwt.Parse(authorization[7:], func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+	if strings.HasPrefix(authorization, "Bearer ") {
+		token, err := jwt.Parse(authorization[7:], func(t *jwt.Token) (interface{}, error) {
+			if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
+			}
+			return setting.LFS.JWTSecretBytes, nil
+		})
+		if err != nil {
+			return nil, nil, "unknown", err
 		}
-		return setting.LFS.JWTSecretBytes, nil
-	})
-	if err != nil {
-		return false
-	}
-	claims, claimsOk := token.Claims.(jwt.MapClaims)
-	if !token.Valid || !claimsOk {
-		return false
+		claims, claimsOk := token.Claims.(jwt.MapClaims)
+		if !token.Valid || !claimsOk {
+			return nil, nil, "unknown", fmt.Errorf("Token claim invalid")
+		}
+		opStr, ok := claims["op"].(string)
+		if !ok {
+			return nil, nil, "unknown", fmt.Errorf("Token operation invalid")
+		}
+		repoID, ok := claims["repo"].(float64)
+		if !ok {
+			return nil, nil, opStr, fmt.Errorf("Token repository id invalid")
+		}
+		r, err := models.GetRepositoryByID(int64(repoID))
+		if err != nil {
+			return nil, nil, opStr, err
+		}
+		userID, ok := claims["user"].(float64)
+		if !ok {
+			return nil, r, opStr, fmt.Errorf("Token user id invalid")
+		}
+		u, err := models.GetUserByID(int64(userID))
+		if err != nil {
+			return nil, r, opStr, err
+		}
+		return u, r, opStr, nil
 	}
 
-	opStr, ok := claims["op"].(string)
-	if !ok {
-		return false
+	if strings.HasPrefix(authorization, "Basic ") {
+		c, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(authorization, "Basic "))
+		if err != nil {
+			return nil, nil, "basic", err
+		}
+		cs := string(c)
+		i := strings.IndexByte(cs, ':')
+		if i < 0 {
+			return nil, nil, "basic", fmt.Errorf("Basic auth invalid")
+		}
+		user, password := cs[:i], cs[i+1:]
+		u, err := models.GetUserByName(user)
+		if err != nil {
+			return nil, nil, "basic", err
+		}
+		if !u.ValidatePassword(password) {
+			return nil, nil, "basic", fmt.Errorf("Basic auth failed")
+		}
+		return u, nil, "basic", nil
 	}
 
-	if requireWrite && opStr != "upload" {
-		return false
-	}
-
-	repoID, ok := claims["repo"].(float64)
-	if !ok {
-		return false
-	}
-
-	if repository.ID != int64(repoID) {
-		return false
-	}
-
-	return true
+	return nil, nil, "unknown", fmt.Errorf("Token not found")
 }
 
 func requireAuth(ctx *context.Context) {

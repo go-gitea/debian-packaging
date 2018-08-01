@@ -43,7 +43,7 @@ var (
 	IssueAlphanumericPattern = regexp.MustCompile(`( |^|\()[A-Z]{1,10}-[1-9][0-9]*\b`)
 	// CrossReferenceIssueNumericPattern matches string that references a numeric issue in a different repository
 	// e.g. gogits/gogs#12345
-	CrossReferenceIssueNumericPattern = regexp.MustCompile(`( |^)[0-9a-zA-Z]+/[0-9a-zA-Z]+#[0-9]+\b`)
+	CrossReferenceIssueNumericPattern = regexp.MustCompile(`( |^)[0-9a-zA-Z-_\.]+/[0-9a-zA-Z-_\.]+#[0-9]+\b`)
 
 	// Sha1CurrentPattern matches string that represents a commit SHA, e.g. d8a994ef243349f321568f9e36d5c3f444b99cae
 	// Although SHA1 hashes are 40 chars long, the regex matches the hash from 7 to 40 chars in length
@@ -114,16 +114,25 @@ func cutoutVerbosePrefix(prefix string) string {
 
 // URLJoin joins url components, like path.Join, but preserving contents
 func URLJoin(base string, elems ...string) string {
-	u, err := url.Parse(base)
+	if !strings.HasSuffix(base, "/") {
+		base += "/"
+	}
+	baseURL, err := url.Parse(base)
 	if err != nil {
 		log.Error(4, "URLJoin: Invalid base URL %s", base)
 		return ""
 	}
-	joinArgs := make([]string, 0, len(elems)+1)
-	joinArgs = append(joinArgs, u.Path)
-	joinArgs = append(joinArgs, elems...)
-	u.Path = path.Join(joinArgs...)
-	return u.String()
+	joinedPath := path.Join(elems...)
+	argURL, err := url.Parse(joinedPath)
+	if err != nil {
+		log.Error(4, "URLJoin: Invalid arg %s", joinedPath)
+		return ""
+	}
+	joinedURL := baseURL.ResolveReference(argURL).String()
+	if !baseURL.IsAbs() && !strings.HasPrefix(base, "/") {
+		return joinedURL[1:] // Removing leading '/' if needed
+	}
+	return joinedURL
 }
 
 // RenderIssueIndexPatternOptions options for RenderIssueIndexPattern function
@@ -391,7 +400,14 @@ func RenderShortLinks(rawBytes []byte, urlPrefix string, noLink bool, isWikiMark
 		}
 		absoluteLink := isLink([]byte(link))
 		if !absoluteLink {
-			link = strings.Replace(link, " ", "+", -1)
+			if image {
+				link = strings.Replace(link, " ", "+", -1)
+			} else {
+				link = strings.Replace(link, " ", "-", -1)
+			}
+			if !strings.Contains(link, "/") {
+				link = url.PathEscape(link)
+			}
 		}
 		if image {
 			if !absoluteLink {

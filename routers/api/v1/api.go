@@ -177,7 +177,10 @@ func reqOrgMembership() macaron.Handler {
 			return
 		}
 
-		if !models.IsOrganizationMember(orgID, ctx.User.ID) {
+		if isMember, err := models.IsOrganizationMember(orgID, ctx.User.ID); err != nil {
+			ctx.Error(500, "IsOrganizationMember", err)
+			return
+		} else if !isMember {
 			if ctx.Org.Organization != nil {
 				ctx.Error(403, "", "Must be an organization member")
 			} else {
@@ -200,7 +203,10 @@ func reqOrgOwnership() macaron.Handler {
 			return
 		}
 
-		if !models.IsOrganizationOwner(orgID, ctx.User.ID) {
+		isOwner, err := models.IsOrganizationOwner(orgID, ctx.User.ID)
+		if err != nil {
+			ctx.Error(500, "IsOrganizationOwner", err)
+		} else if !isOwner {
 			if ctx.Org.Organization != nil {
 				ctx.Error(403, "", "Must be an organization owner")
 			} else {
@@ -406,7 +412,8 @@ func RegisterRoutes(m *macaron.Macaron) {
 					m.Group("/comments", func() {
 						m.Get("", repo.ListRepoIssueComments)
 						m.Combo("/:id", reqToken()).
-							Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueComment)
+							Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueComment).
+							Delete(repo.DeleteIssueComment)
 					})
 					m.Group("/:index", func() {
 						m.Combo("").Get(repo.GetIssue).
@@ -415,8 +422,8 @@ func RegisterRoutes(m *macaron.Macaron) {
 						m.Group("/comments", func() {
 							m.Combo("").Get(repo.ListIssueComments).
 								Post(reqToken(), bind(api.CreateIssueCommentOption{}), repo.CreateIssueComment)
-							m.Combo("/:id", reqToken()).Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueComment).
-								Delete(repo.DeleteIssueComment)
+							m.Combo("/:id", reqToken()).Patch(bind(api.EditIssueCommentOption{}), repo.EditIssueCommentDeprecated).
+								Delete(repo.DeleteIssueCommentDeprecated)
 						})
 
 						m.Group("/labels", func() {
@@ -456,9 +463,9 @@ func RegisterRoutes(m *macaron.Macaron) {
 				})
 				m.Group("/releases", func() {
 					m.Combo("").Get(repo.ListReleases).
-						Post(reqToken(), reqRepoWriter(), bind(api.CreateReleaseOption{}), repo.CreateRelease)
+						Post(reqToken(), reqRepoWriter(), context.ReferencesGitRepo(), bind(api.CreateReleaseOption{}), repo.CreateRelease)
 					m.Combo("/:id").Get(repo.GetRelease).
-						Patch(reqToken(), reqRepoWriter(), bind(api.EditReleaseOption{}), repo.EditRelease).
+						Patch(reqToken(), reqRepoWriter(), context.ReferencesGitRepo(), bind(api.EditReleaseOption{}), repo.EditRelease).
 						Delete(reqToken(), reqRepoWriter(), repo.DeleteRelease)
 				})
 				m.Post("/mirror-sync", reqToken(), reqRepoWriter(), repo.MirrorSync)
@@ -470,7 +477,7 @@ func RegisterRoutes(m *macaron.Macaron) {
 						m.Combo("").Get(repo.GetPullRequest).
 							Patch(reqToken(), reqRepoWriter(), bind(api.EditPullRequestOption{}), repo.EditPullRequest)
 						m.Combo("/merge").Get(repo.IsPullRequestMerged).
-							Post(reqToken(), reqRepoWriter(), repo.MergePullRequest)
+							Post(reqToken(), reqRepoWriter(), bind(auth.MergePullRequestForm{}), repo.MergePullRequest)
 					})
 
 				}, mustAllowPulls, context.ReferencesGitRepo())
@@ -541,7 +548,10 @@ func RegisterRoutes(m *macaron.Macaron) {
 				m.Group("/:username", func() {
 					m.Combo("").Patch(bind(api.EditUserOption{}), admin.EditUser).
 						Delete(admin.DeleteUser)
-					m.Post("/keys", bind(api.CreateKeyOption{}), admin.CreatePublicKey)
+					m.Group("/keys", func() {
+						m.Post("", bind(api.CreateKeyOption{}), admin.CreatePublicKey)
+						m.Delete("/:id", admin.DeleteUserPublicKey)
+					})
 					m.Post("/orgs", bind(api.CreateOrgOption{}), admin.CreateOrg)
 					m.Post("/repos", bind(api.CreateRepoOption{}), admin.CreateRepo)
 				})
