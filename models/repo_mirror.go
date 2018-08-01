@@ -31,10 +31,8 @@ type Mirror struct {
 	Interval    time.Duration
 	EnablePrune bool `xorm:"NOT NULL DEFAULT true"`
 
-	Updated        time.Time `xorm:"-"`
-	UpdatedUnix    int64     `xorm:"INDEX"`
-	NextUpdate     time.Time `xorm:"-"`
-	NextUpdateUnix int64     `xorm:"INDEX"`
+	UpdatedUnix    util.TimeStamp `xorm:"INDEX"`
+	NextUpdateUnix util.TimeStamp `xorm:"INDEX"`
 
 	address string `xorm:"-"`
 }
@@ -42,16 +40,8 @@ type Mirror struct {
 // BeforeInsert will be invoked by XORM before inserting a record
 func (m *Mirror) BeforeInsert() {
 	if m != nil {
-		m.UpdatedUnix = time.Now().Unix()
-		m.NextUpdateUnix = m.NextUpdate.Unix()
-	}
-}
-
-// BeforeUpdate is invoked from XORM before updating this object.
-func (m *Mirror) BeforeUpdate() {
-	if m != nil {
-		m.UpdatedUnix = m.Updated.Unix()
-		m.NextUpdateUnix = m.NextUpdate.Unix()
+		m.UpdatedUnix = util.TimeStampNow()
+		m.NextUpdateUnix = util.TimeStampNow()
 	}
 }
 
@@ -66,14 +56,11 @@ func (m *Mirror) AfterLoad(session *xorm.Session) {
 	if err != nil {
 		log.Error(3, "getRepositoryByID[%d]: %v", m.ID, err)
 	}
-
-	m.Updated = time.Unix(m.UpdatedUnix, 0).Local()
-	m.NextUpdate = time.Unix(m.NextUpdateUnix, 0).Local()
 }
 
 // ScheduleNextUpdate calculates and sets next update time.
 func (m *Mirror) ScheduleNextUpdate() {
-	m.NextUpdate = time.Now().Add(m.Interval)
+	m.NextUpdateUnix = util.TimeStampNow().AddDuration(m.Interval)
 }
 
 func remoteAddress(repoPath string) (string, error) {
@@ -193,7 +180,7 @@ func (m *Mirror) runSync() bool {
 		}
 	}
 
-	m.Updated = time.Now()
+	m.UpdatedUnix = util.TimeStampNow()
 	return true
 }
 
@@ -257,6 +244,8 @@ func MirrorUpdate() {
 // SyncMirrors checks and syncs mirrors.
 // TODO: sync more mirrors at same time.
 func SyncMirrors() {
+	sess := x.NewSession()
+	defer sess.Close()
 	// Start listening on new sync requests.
 	for repoID := range MirrorQueue.Queue() {
 		log.Trace("SyncMirrors [repo_id: %v]", repoID)
@@ -273,8 +262,20 @@ func SyncMirrors() {
 		}
 
 		m.ScheduleNextUpdate()
-		if err = UpdateMirror(m); err != nil {
+		if err = updateMirror(sess, m); err != nil {
 			log.Error(4, "UpdateMirror [%s]: %v", repoID, err)
+			continue
+		}
+
+		// Get latest commit date and update to current repository updated time
+		commitDate, err := git.GetLatestCommitTime(m.Repo.RepoPath())
+		if err != nil {
+			log.Error(2, "GetLatestCommitDate [%s]: %v", m.RepoID, err)
+			continue
+		}
+
+		if _, err = sess.Exec("UPDATE repository SET updated_unix = ? WHERE id = ?", commitDate.Unix(), m.RepoID); err != nil {
+			log.Error(2, "Update repository 'updated_unix' [%s]: %v", m.RepoID, err)
 			continue
 		}
 	}

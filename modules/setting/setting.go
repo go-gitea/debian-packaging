@@ -56,8 +56,9 @@ type LandingPage string
 
 // enumerates all the landing page types
 const (
-	LandingPageHome    LandingPage = "/"
-	LandingPageExplore LandingPage = "/explore"
+	LandingPageHome          LandingPage = "/"
+	LandingPageExplore       LandingPage = "/explore"
+	LandingPageOrganizations LandingPage = "/explore/organizations"
 )
 
 // MarkupParser defines the external parser configured in ini
@@ -68,6 +69,13 @@ type MarkupParser struct {
 	FileExtensions []string
 	IsInputFile    bool
 }
+
+// enumerates all the policy repository creating
+const (
+	RepoCreatingLastUserVisibility = "last"
+	RepoCreatingPrivate            = "private"
+	RepoCreatingPublic             = "public"
+)
 
 // settings
 var (
@@ -88,6 +96,8 @@ var (
 	HTTPAddr             string
 	HTTPPort             string
 	LocalURL             string
+	RedirectOtherPort    bool
+	PortToRedirect       string
 	OfflineMode          bool
 	DisableRouterLog     bool
 	CertFile             string
@@ -179,6 +189,7 @@ var (
 	Repository = struct {
 		AnsiCharset            string
 		ForcePrivate           bool
+		DefaultPrivate         string
 		MaxCreationLimit       int
 		MirrorQueueLength      int
 		PullRequestQueueLength int
@@ -204,10 +215,12 @@ var (
 		// Repository local settings
 		Local struct {
 			LocalCopyPath string
+			LocalWikiPath string
 		} `ini:"-"`
 	}{
 		AnsiCharset:            "",
 		ForcePrivate:           false,
+		DefaultPrivate:         RepoCreatingLastUserVisibility,
 		MaxCreationLimit:       -1,
 		MirrorQueueLength:      1000,
 		PullRequestQueueLength: 1000,
@@ -242,8 +255,10 @@ var (
 		// Repository local settings
 		Local: struct {
 			LocalCopyPath string
+			LocalWikiPath string
 		}{
 			LocalCopyPath: "tmp/local-repo",
+			LocalWikiPath: "tmp/local-wiki",
 		},
 	}
 	RepoRootPath string
@@ -255,6 +270,7 @@ var (
 		IssuePagingNum      int
 		RepoSearchPagingNum int
 		FeedMaxCommitNum    int
+		ReactionMaxUserNum  int
 		ThemeColorMetaTag   string
 		MaxDisplayFileSize  int64
 		ShowUserEmail       bool
@@ -278,6 +294,7 @@ var (
 		IssuePagingNum:      10,
 		RepoSearchPagingNum: 10,
 		FeedMaxCommitNum:    5,
+		ReactionMaxUserNum:  10,
 		ThemeColorMetaTag:   `#6cc644`,
 		MaxDisplayFileSize:  8388608,
 		Admin: struct {
@@ -331,6 +348,7 @@ var (
 	LibravatarService     *libravatar.Libravatar
 
 	// Log settings
+	LogLevel    string
 	LogRootPath string
 	LogModes    []string
 	LogConfigs  []string
@@ -527,6 +545,9 @@ var (
 	IterateBufferSize int
 
 	ExternalMarkupParsers []MarkupParser
+	// UILocation is the location on the UI, so that we can display the time on UI.
+	// Currently only show the default time.Local, it could be added to app.ini after UI is ready
+	UILocation = time.Local
 )
 
 // DateLang transforms standard language locale name to corresponding value in datetime plugin.
@@ -562,13 +583,9 @@ func getAppPath() (string, error) {
 func getWorkPath(appPath string) string {
 	workPath := ""
 	giteaWorkPath := os.Getenv("GITEA_WORK_DIR")
-	gogsWorkPath := os.Getenv("GOGS_WORK_DIR")
 
 	if len(giteaWorkPath) > 0 {
 		workPath = giteaWorkPath
-	} else if len(gogsWorkPath) > 0 {
-		log.Warn(`Usage of GOGS_WORK_DIR is deprecated and will be *removed* in a future release, please consider changing to GITEA_WORK_DIR`)
-		workPath = gogsWorkPath
 	} else {
 		i := strings.LastIndex(appPath, "/")
 		if i == -1 {
@@ -663,6 +680,7 @@ func NewContext() {
 	}
 	homeDir = strings.Replace(homeDir, "\\", "/", -1)
 
+	LogLevel = getLogLevel("log", "LEVEL", "Info")
 	LogRootPath = Cfg.Section("log").Key("ROOT_PATH").MustString(path.Join(AppWorkPath, "log"))
 	forcePathSeparator(LogRootPath)
 
@@ -728,6 +746,8 @@ func NewContext() {
 		defaultLocalURL += ":" + HTTPPort + "/"
 	}
 	LocalURL = sec.Key("LOCAL_ROOT_URL").MustString(defaultLocalURL)
+	RedirectOtherPort = sec.Key("REDIRECT_OTHER_PORT").MustBool(false)
+	PortToRedirect = sec.Key("PORT_TO_REDIRECT").MustString("80")
 	OfflineMode = sec.Key("OFFLINE_MODE").MustBool()
 	DisableRouterLog = sec.Key("DISABLE_ROUTER_LOG").MustBool()
 	StaticRootPath = sec.Key("STATIC_ROOT_PATH").MustString(AppWorkPath)
@@ -738,6 +758,8 @@ func NewContext() {
 	switch sec.Key("LANDING_PAGE").MustString("home") {
 	case "explore":
 		LandingPageURL = LandingPageExplore
+	case "organizations":
+		LandingPageURL = LandingPageOrganizations
 	default:
 		LandingPageURL = LandingPageHome
 	}
@@ -934,7 +956,7 @@ func NewContext() {
 	AttachmentAllowedTypes = strings.Replace(sec.Key("ALLOWED_TYPES").MustString("image/jpeg,image/png,application/zip,application/gzip"), "|", ",", -1)
 	AttachmentMaxSize = sec.Key("MAX_SIZE").MustInt64(4)
 	AttachmentMaxFiles = sec.Key("MAX_FILES").MustInt(5)
-	AttachmentEnabled = sec.Key("ENABLE").MustBool(true)
+	AttachmentEnabled = sec.Key("ENABLED").MustBool(true)
 
 	TimeFormatKey := Cfg.Section("time").Key("FORMAT").MustString("RFC1123")
 	TimeFormat = map[string]string{
@@ -1019,7 +1041,7 @@ func NewContext() {
 		GravatarSource = source
 	}
 	DisableGravatar = sec.Key("DISABLE_GRAVATAR").MustBool()
-	EnableFederatedAvatar = sec.Key("ENABLE_FEDERATED_AVATAR").MustBool()
+	EnableFederatedAvatar = sec.Key("ENABLE_FEDERATED_AVATAR").MustBool(!InstallLock)
 	if OfflineMode {
 		DisableGravatar = true
 		EnableFederatedAvatar = false
@@ -1198,6 +1220,11 @@ var logLevels = map[string]string{
 	"Critical": "5",
 }
 
+func getLogLevel(section string, key string, defaultValue string) string {
+	validLevels := []string{"Trace", "Debug", "Info", "Warn", "Error", "Critical"}
+	return Cfg.Section(section).Key(key).In(defaultValue, validLevels)
+}
+
 func newLogService() {
 	log.Info("Gitea v%s%s", AppVer, AppBuiltWith)
 
@@ -1222,11 +1249,8 @@ func newLogService() {
 			sec, _ = Cfg.NewSection("log." + mode)
 		}
 
-		validLevels := []string{"Trace", "Debug", "Info", "Warn", "Error", "Critical"}
 		// Log level.
-		levelName := Cfg.Section("log."+mode).Key("LEVEL").In(
-			Cfg.Section("log").Key("LEVEL").In("Trace", validLevels),
-			validLevels)
+		levelName := getLogLevel("log."+mode, "LEVEL", LogLevel)
 		level, ok := logLevels[levelName]
 		if !ok {
 			log.Fatal(4, "Unknown log level: %s", levelName)
@@ -1290,11 +1314,8 @@ func NewXORMLogService(disableConsole bool) {
 			sec, _ = Cfg.NewSection("log." + mode)
 		}
 
-		validLevels := []string{"Trace", "Debug", "Info", "Warn", "Error", "Critical"}
 		// Log level.
-		levelName := Cfg.Section("log."+mode).Key("LEVEL").In(
-			Cfg.Section("log").Key("LEVEL").In("Trace", validLevels),
-			validLevels)
+		levelName := getLogLevel("log."+mode, "LEVEL", LogLevel)
 		level, ok := logLevels[levelName]
 		if !ok {
 			log.Fatal(4, "Unknown log level: %s", levelName)
@@ -1515,7 +1536,7 @@ func newWebhookService() {
 	Webhook.QueueLength = sec.Key("QUEUE_LENGTH").MustInt(1000)
 	Webhook.DeliverTimeout = sec.Key("DELIVER_TIMEOUT").MustInt(5)
 	Webhook.SkipTLSVerify = sec.Key("SKIP_TLS_VERIFY").MustBool()
-	Webhook.Types = []string{"gitea", "gogs", "slack", "discord"}
+	Webhook.Types = []string{"gitea", "gogs", "slack", "discord", "dingtalk"}
 	Webhook.PagingNum = sec.Key("PAGING_NUM").MustInt(10)
 }
 

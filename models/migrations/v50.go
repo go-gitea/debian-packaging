@@ -45,7 +45,7 @@ func migrateProtectedBranchStruct(x *xorm.Engine) error {
 	case setting.UseMySQL, setting.UsePostgreSQL, setting.UseMSSQL, setting.UseTiDB:
 		if _, err := x.Exec("ALTER TABLE protected_branch DROP COLUMN can_push"); err != nil {
 			// Ignoring this error in case we run this migration second time (after migration reordering)
-			log.Warn("DROP COLUMN can_push: %v", err)
+			log.Warn("DROP COLUMN can_push (skipping): %v", err)
 		}
 	default:
 		log.Fatal(4, "Unrecognized DB")

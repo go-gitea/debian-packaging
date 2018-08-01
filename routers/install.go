@@ -33,7 +33,7 @@ const (
 // InstallInit prepare for rendering installation page
 func InstallInit(ctx *context.Context) {
 	if setting.InstallLock {
-		ctx.Handle(404, "Install", errors.New("Installation is prohibited"))
+		ctx.NotFound("Install", errors.New("Installation is prohibited"))
 		return
 	}
 
@@ -310,7 +310,7 @@ func InstallPost(ctx *context.Context, form auth.InstallForm) {
 	cfg.Section("session").Key("PROVIDER").SetValue("file")
 
 	cfg.Section("log").Key("MODE").SetValue("file")
-	cfg.Section("log").Key("LEVEL").SetValue("Info")
+	cfg.Section("log").Key("LEVEL").SetValue(setting.LogLevel)
 	cfg.Section("log").Key("ROOT_PATH").SetValue(form.LogRootPath)
 
 	cfg.Section("security").Key("INSTALL_LOCK").SetValue("true")

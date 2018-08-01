@@ -169,9 +169,10 @@ func (f *AddOpenIDForm) Validate(ctx *macaron.Context, errs binding.Errors) bind
 
 // AddKeyForm form for adding SSH/GPG key
 type AddKeyForm struct {
-	Type    string `binding:"OmitEmpty"`
-	Title   string `binding:"Required;MaxSize(50)"`
-	Content string `binding:"Required"`
+	Type       string `binding:"OmitEmpty"`
+	Title      string `binding:"Required;MaxSize(50)"`
+	Content    string `binding:"Required"`
+	IsWritable bool
 }
 
 // Validate validates the fields
@@ -181,7 +182,7 @@ func (f *AddKeyForm) Validate(ctx *macaron.Context, errs binding.Errors) binding
 
 // NewAccessTokenForm form for creating access token
 type NewAccessTokenForm struct {
-	Name string `binding:"Required"`
+	Name string `binding:"Required;MaxSize(255)"`
 }
 
 // Validate valideates the fields

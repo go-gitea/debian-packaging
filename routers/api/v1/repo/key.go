@@ -106,7 +106,9 @@ func GetDeployKey(ctx *context.APIContext) {
 
 // HandleCheckKeyStringError handle check key error
 func HandleCheckKeyStringError(ctx *context.APIContext, err error) {
-	if models.IsErrKeyUnableVerify(err) {
+	if models.IsErrSSHDisabled(err) {
+		ctx.Error(422, "", "SSH is disabled")
+	} else if models.IsErrKeyUnableVerify(err) {
 		ctx.Error(422, "", "Unable to verify key content")
 	} else {
 		ctx.Error(422, "", fmt.Errorf("Invalid key content: %v", err))
@@ -158,7 +160,7 @@ func CreateDeployKey(ctx *context.APIContext, form api.CreateKeyOption) {
 		return
 	}
 
-	key, err := models.AddDeployKey(ctx.Repo.Repository.ID, form.Title, content)
+	key, err := models.AddDeployKey(ctx.Repo.Repository.ID, form.Title, content, form.ReadOnly)
 	if err != nil {
 		HandleAddKeyError(ctx, err)
 		return

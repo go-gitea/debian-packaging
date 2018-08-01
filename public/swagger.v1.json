@@ -165,6 +165,45 @@
         }
       }
     },
+    "/admin/users/{username}/keys/{id}": {
+      "delete": {
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "admin"
+        ],
+        "summary": "Delete a user's public key",
+        "operationId": "adminDeleteUserPublicKey",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "username of user",
+            "name": "username",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "id of the key to delete",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          },
+          "403": {
+            "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
+          }
+        }
+      }
+    },
     "/admin/users/{username}/orgs": {
       "post": {
         "consumes": [
@@ -849,13 +888,19 @@
           },
           {
             "type": "integer",
-            "description": "if provided, will return only repos owned by the user with the given id",
+            "description": "search only for repos that the user with the given id owns or contributes to",
             "name": "uid",
             "in": "query"
           },
           {
             "type": "integer",
-            "description": "maximum number of repos to return",
+            "description": "page number of results to return (1-based)",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "type": "integer",
+            "description": "page size of results, maximum page size is 50",
             "name": "limit",
             "in": "query"
           },
@@ -867,7 +912,7 @@
           },
           {
             "type": "boolean",
-            "description": "only search for repositories owned by the authenticated user",
+            "description": "if `uid` is given, search only for repos that the user owns",
             "name": "exclusive",
             "in": "query"
           }
@@ -1219,91 +1264,6 @@
         }
       }
     },
-    "/repos/{owner}/{repo}/comments/{id}": {
-      "delete": {
-        "tags": [
-          "issue"
-        ],
-        "summary": "Delete a comment",
-        "operationId": "issueDeleteComment",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "owner of the repo",
-            "name": "owner",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "name of the repo",
-            "name": "repo",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "integer",
-            "description": "id of comment to delete",
-            "name": "id",
-            "in": "path",
-            "required": true
-          }
-        ],
-        "responses": {
-          "204": {
-            "$ref": "#/responses/empty"
-          }
-        }
-      },
-      "patch": {
-        "consumes": [
-          "application/json"
-        ],
-        "produces": [
-          "application/json"
-        ],
-        "tags": [
-          "issue"
-        ],
-        "summary": "Edit a comment",
-        "operationId": "issueEditComment",
-        "parameters": [
-          {
-            "type": "string",
-            "description": "owner of the repo",
-            "name": "owner",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "string",
-            "description": "name of the repo",
-            "name": "repo",
-            "in": "path",
-            "required": true
-          },
-          {
-            "type": "integer",
-            "description": "id of the comment to edit",
-            "name": "id",
-            "in": "path",
-            "required": true
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "schema": {
-              "$ref": "#/definitions/EditIssueCommentOption"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/responses/Comment"
-          }
-        }
-      }
-    },
     "/repos/{owner}/{repo}/commits/{ref}/statuses": {
       "get": {
         "produces": [
@@ -1521,7 +1481,7 @@
           }
         ],
         "responses": {
-          "200": {
+          "201": {
             "$ref": "#/responses/Hook"
           }
         }
@@ -1959,7 +1919,92 @@
         }
       }
     },
-    "/repos/{owner}/{repo}/issues/{id}": {
+    "/repos/{owner}/{repo}/issues/comments/{id}": {
+      "delete": {
+        "tags": [
+          "issue"
+        ],
+        "summary": "Delete a comment",
+        "operationId": "issueDeleteComment",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "id of comment to delete",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          }
+        }
+      },
+      "patch": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "issue"
+        ],
+        "summary": "Edit a comment",
+        "operationId": "issueEditComment",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "id of the comment to edit",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/EditIssueCommentOption"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/Comment"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/issues/{index}": {
       "get": {
         "produces": [
           "application/json"
@@ -1967,7 +2012,7 @@
         "tags": [
           "issue"
         ],
-        "summary": "Get an issue by id",
+        "summary": "Get an issue",
         "operationId": "issueGetIssue",
         "parameters": [
           {
@@ -1986,8 +2031,8 @@
           },
           {
             "type": "integer",
-            "description": "id of the issue to get",
-            "name": "id",
+            "description": "index of the issue to get",
+            "name": "index",
             "in": "path",
             "required": true
           }
@@ -2027,8 +2072,8 @@
           },
           {
             "type": "integer",
-            "description": "id of the issue to edit",
-            "name": "id",
+            "description": "index of the issue to edit",
+            "name": "index",
             "in": "path",
             "required": true
           },
@@ -2092,6 +2137,107 @@
         ],
         "responses": {
           "201": {
+            "$ref": "#/responses/Comment"
+          }
+        }
+      }
+    },
+    "/repos/{owner}/{repo}/issues/{index}/comments/{id}": {
+      "delete": {
+        "tags": [
+          "issue"
+        ],
+        "summary": "Delete a comment",
+        "operationId": "issueDeleteCommentDeprecated",
+        "deprecated": true,
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "this parameter is ignored",
+            "name": "index",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "id of comment to delete",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/responses/empty"
+          }
+        }
+      },
+      "patch": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "tags": [
+          "issue"
+        ],
+        "summary": "Edit a comment",
+        "operationId": "issueEditCommentDeprecated",
+        "deprecated": true,
+        "parameters": [
+          {
+            "type": "string",
+            "description": "owner of the repo",
+            "name": "owner",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "name of the repo",
+            "name": "repo",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "this parameter is ignored",
+            "name": "index",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "id of the comment to edit",
+            "name": "id",
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "$ref": "#/definitions/EditIssueCommentOption"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "$ref": "#/responses/Comment"
           }
         }
@@ -4251,6 +4397,9 @@
           },
           "403": {
             "$ref": "#/responses/forbidden"
+          },
+          "404": {
+            "$ref": "#/responses/notFound"
           }
         }
       }
@@ -6160,6 +6309,10 @@
           "type": "string",
           "format": "date-time",
           "x-go-name": "Created"
+        },
+        "fingerprint": {
+          "type": "string",
+          "x-go-name": "Fingerprint"
         },
         "id": {
           "type": "integer",

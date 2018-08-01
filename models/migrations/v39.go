@@ -7,20 +7,51 @@ package migrations
 import (
 	"fmt"
 
+	"code.gitea.io/git"
+	"code.gitea.io/gitea/models"
+	"code.gitea.io/gitea/modules/log"
+
 	"github.com/go-xorm/xorm"
 )
 
-func fixProtectedBranchCanPushValue(x *xorm.Engine) error {
-	type ProtectedBranch struct {
-		CanPush bool `xorm:"NOT NULL DEFAULT false"`
-	}
+// ReleaseV39 describes the added field for Release
+type ReleaseV39 struct {
+	IsTag bool `xorm:"NOT NULL DEFAULT false"`
+}
 
-	if err := x.Sync2(new(ProtectedBranch)); err != nil {
+// TableName will be invoked by XORM to customrize the table name
+func (*ReleaseV39) TableName() string {
+	return "release"
+}
+
+func releaseAddColumnIsTagAndSyncTags(x *xorm.Engine) error {
+	if err := x.Sync2(new(ReleaseV39)); err != nil {
 		return fmt.Errorf("Sync2: %v", err)
 	}
 
-	_, err := x.Cols("can_push").Update(&ProtectedBranch{
-		CanPush: false,
-	})
-	return err
+	// For the sake of SQLite3, we can't use x.Iterate here.
+	offset := 0
+	pageSize := models.RepositoryListDefaultPageSize
+	for {
+		repos := make([]*models.Repository, 0, pageSize)
+		if err := x.Table("repository").Asc("id").Limit(pageSize, offset).Find(&repos); err != nil {
+			return fmt.Errorf("select repos [offset: %d]: %v", offset, err)
+		}
+		for _, repo := range repos {
+			gitRepo, err := git.OpenRepository(repo.RepoPath())
+			if err != nil {
+				log.Warn("OpenRepository: %v", err)
+				continue
+			}
+
+			if err = models.SyncReleasesWithTags(repo, gitRepo); err != nil {
+				log.Warn("SyncReleasesWithTags: %v", err)
+			}
+		}
+		if len(repos) < pageSize {
+			break
+		}
+		offset += pageSize
+	}
+	return nil
 }

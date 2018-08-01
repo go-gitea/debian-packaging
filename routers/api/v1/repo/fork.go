@@ -89,7 +89,11 @@ func CreateFork(ctx *context.APIContext, form api.CreateForkOption) {
 			}
 			return
 		}
-		if !org.IsOrgMember(ctx.User.ID) {
+		isMember, err := org.IsOrgMember(ctx.User.ID)
+		if err != nil {
+			ctx.ServerError("IsOrgMember", err)
+			return
+		} else if !isMember {
 			ctx.Status(403)
 			return
 		}

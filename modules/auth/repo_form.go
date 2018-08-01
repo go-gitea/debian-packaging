@@ -107,6 +107,10 @@ type RepoSettingForm struct {
 	TrackerURLFormat                 string
 	TrackerIssueStyle                string
 	EnablePulls                      bool
+	PullsIgnoreWhitespace            bool
+	PullsAllowMerge                  bool
+	PullsAllowRebase                 bool
+	PullsAllowSquash                 bool
 	EnableTimetracker                bool
 	AllowOnlyContributorsToTrackTime bool
 }
@@ -222,6 +226,17 @@ func (f *NewDiscordHookForm) Validate(ctx *macaron.Context, errs binding.Errors)
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
+// NewDingtalkHookForm form for creating dingtalk hook
+type NewDingtalkHookForm struct {
+	PayloadURL string `binding:"Required;ValidUrl"`
+	WebhookForm
+}
+
+// Validate validates the fields
+func (f *NewDingtalkHookForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
 // .___
 // |   | ______ ________ __   ____
 // |   |/  ___//  ___/  |  \_/ __ \
@@ -254,6 +269,16 @@ type CreateCommentForm struct {
 
 // Validate validates the fields
 func (f *CreateCommentForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+// ReactionForm form for adding and removing reaction
+type ReactionForm struct {
+	Content string `binding:"Required;In(+1,-1,laugh,confused,heart,hooray)"`
+}
+
+// Validate validates the fields
+func (f *ReactionForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
@@ -305,6 +330,25 @@ func (f *InitializeLabelsForm) Validate(ctx *macaron.Context, errs binding.Error
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
 
+// __________      .__  .__    __________                                     __
+// \______   \__ __|  | |  |   \______   \ ____  ________ __   ____   _______/  |_
+//  |     ___/  |  \  | |  |    |       _// __ \/ ____/  |  \_/ __ \ /  ___/\   __\
+//  |    |   |  |  /  |_|  |__  |    |   \  ___< <_|  |  |  /\  ___/ \___ \  |  |
+//  |____|   |____/|____/____/  |____|_  /\___  >__   |____/  \___  >____  > |__|
+//                                     \/     \/   |__|           \/     \/
+
+// MergePullRequestForm form for merging Pull Request
+type MergePullRequestForm struct {
+	Do                string `binding:"Required;In(merge,rebase,squash)"`
+	MergeTitleField   string
+	MergeMessageField string
+}
+
+// Validate validates the fields
+func (f *MergePullRequestForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
 // __________       .__
 // \______   \ ____ |  |   ____ _____    ______ ____
 //  |       _// __ \|  | _/ __ \\__  \  /  ___// __ \
@@ -351,10 +395,9 @@ func (f *EditReleaseForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 
 // NewWikiForm form for creating wiki
 type NewWikiForm struct {
-	OldTitle string
-	Title    string `binding:"Required"`
-	Content  string `binding:"Required"`
-	Message  string
+	Title   string `binding:"Required"`
+	Content string `binding:"Required"`
+	Message string
 }
 
 // Validate validates the fields

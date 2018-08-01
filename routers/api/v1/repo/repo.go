@@ -33,11 +33,15 @@ func Search(ctx *context.APIContext) {
 	//   type: string
 	// - name: uid
 	//   in: query
-	//   description: if provided, will return only repos owned by the user with the given id
+	//   description: search only for repos that the user with the given id owns or contributes to
+	//   type: integer
+	// - name: page
+	//   in: query
+	//   description: page number of results to return (1-based)
 	//   type: integer
 	// - name: limit
 	//   in: query
-	//   description: maximum number of repos to return
+	//   description: page size of results, maximum page size is 50
 	//   type: integer
 	// - name: mode
 	//   in: query
@@ -46,7 +50,7 @@ func Search(ctx *context.APIContext) {
 	//   type: string
 	// - name: exclusive
 	//   in: query
-	//   description: only search for repositories owned by the authenticated user
+	//   description: if `uid` is given, search only for repos that the user owns
 	//   type: boolean
 	// responses:
 	//   "200":
@@ -56,6 +60,7 @@ func Search(ctx *context.APIContext) {
 	opts := &models.SearchRepoOptions{
 		Keyword:     strings.Trim(ctx.Query("q"), " "),
 		OwnerID:     ctx.QueryInt64("uid"),
+		Page:        ctx.QueryInt("page"),
 		PageSize:    convert.ToCorrectPageSize(ctx.QueryInt("limit")),
 		Collaborate: util.OptionalBoolNone,
 	}
@@ -103,8 +108,19 @@ func Search(ctx *context.APIContext) {
 		}
 
 		// Check visibility.
-		if ctx.IsSigned && (ctx.User.ID == repoOwner.ID || (repoOwner.IsOrganization() && repoOwner.IsOwnedBy(ctx.User.ID))) {
-			opts.Private = true
+		if ctx.IsSigned {
+			if ctx.User.ID == repoOwner.ID {
+				opts.Private = true
+			} else if repoOwner.IsOrganization() {
+				opts.Private, err = repoOwner.IsOwnedBy(ctx.User.ID)
+				if err != nil {
+					ctx.JSON(500, api.SearchError{
+						OK:    false,
+						Error: err.Error(),
+					})
+					return
+				}
+			}
 		}
 	}
 
@@ -240,7 +256,11 @@ func CreateOrgRepo(ctx *context.APIContext, opt api.CreateRepoOption) {
 		return
 	}
 
-	if !org.IsOwnedBy(ctx.User.ID) {
+	isOwner, err := org.IsOwnedBy(ctx.User.ID)
+	if err != nil {
+		ctx.ServerError("IsOwnedBy", err)
+		return
+	} else if !isOwner {
 		ctx.Error(403, "", "Given user is not owner of organization.")
 		return
 	}
@@ -287,7 +307,11 @@ func Migrate(ctx *context.APIContext, form auth.MigrateRepoForm) {
 
 	if ctxUser.IsOrganization() && !ctx.User.IsAdmin {
 		// Check ownership of organization.
-		if !ctxUser.IsOwnedBy(ctx.User.ID) {
+		isOwner, err := ctxUser.IsOwnedBy(ctx.User.ID)
+		if err != nil {
+			ctx.Error(500, "IsOwnedBy", err)
+			return
+		} else if !isOwner {
 			ctx.Error(403, "", "Given user is not owner of organization.")
 			return
 		}
@@ -426,9 +450,15 @@ func Delete(ctx *context.APIContext) {
 	owner := ctx.Repo.Owner
 	repo := ctx.Repo.Repository
 
-	if owner.IsOrganization() && !owner.IsOwnedBy(ctx.User.ID) {
-		ctx.Error(403, "", "Given user is not owner of organization.")
-		return
+	if owner.IsOrganization() {
+		isOwner, err := owner.IsOwnedBy(ctx.User.ID)
+		if err != nil {
+			ctx.Error(500, "IsOwnedBy", err)
+			return
+		} else if !isOwner {
+			ctx.Error(403, "", "Given user is not owner of organization.")
+			return
+		}
 	}
 
 	if err := models.DeleteRepository(ctx.User, owner.ID, repo.ID); err != nil {

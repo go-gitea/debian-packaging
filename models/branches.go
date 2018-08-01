@@ -6,7 +6,6 @@ package models
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"code.gitea.io/gitea/modules/base"
@@ -29,12 +28,10 @@ type ProtectedBranch struct {
 	BranchName       string `xorm:"UNIQUE(s)"`
 	CanPush          bool   `xorm:"NOT NULL DEFAULT false"`
 	EnableWhitelist  bool
-	WhitelistUserIDs []int64   `xorm:"JSON TEXT"`
-	WhitelistTeamIDs []int64   `xorm:"JSON TEXT"`
-	Created          time.Time `xorm:"-"`
-	CreatedUnix      int64     `xorm:"created"`
-	Updated          time.Time `xorm:"-"`
-	UpdatedUnix      int64     `xorm:"updated"`
+	WhitelistUserIDs []int64        `xorm:"JSON TEXT"`
+	WhitelistTeamIDs []int64        `xorm:"JSON TEXT"`
+	CreatedUnix      util.TimeStamp `xorm:"created"`
+	UpdatedUnix      util.TimeStamp `xorm:"updated"`
 }
 
 // IsProtected returns if the branch is protected
@@ -72,7 +69,7 @@ func GetProtectedBranchByRepoID(RepoID int64) ([]*ProtectedBranch, error) {
 
 // GetProtectedBranchBy getting protected branch by ID/Name
 func GetProtectedBranchBy(repoID int64, BranchName string) (*ProtectedBranch, error) {
-	rel := &ProtectedBranch{RepoID: repoID, BranchName: strings.ToLower(BranchName)}
+	rel := &ProtectedBranch{RepoID: repoID, BranchName: BranchName}
 	has, err := x.Get(rel)
 	if err != nil {
 		return nil, err
@@ -158,6 +155,10 @@ func (repo *Repository) GetProtectedBranches() ([]*ProtectedBranch, error) {
 
 // IsProtectedBranch checks if branch is protected
 func (repo *Repository) IsProtectedBranch(branchName string, doer *User) (bool, error) {
+	if doer == nil {
+		return true, nil
+	}
+
 	protectedBranch := &ProtectedBranch{
 		RepoID:     repo.ID,
 		BranchName: branchName,
@@ -197,19 +198,13 @@ func (repo *Repository) DeleteProtectedBranch(id int64) (err error) {
 
 // DeletedBranch struct
 type DeletedBranch struct {
-	ID          int64     `xorm:"pk autoincr"`
-	RepoID      int64     `xorm:"UNIQUE(s) INDEX NOT NULL"`
-	Name        string    `xorm:"UNIQUE(s) NOT NULL"`
-	Commit      string    `xorm:"UNIQUE(s) NOT NULL"`
-	DeletedByID int64     `xorm:"INDEX"`
-	DeletedBy   *User     `xorm:"-"`
-	Deleted     time.Time `xorm:"-"`
-	DeletedUnix int64     `xorm:"INDEX created"`
-}
-
-// AfterLoad is invoked from XORM after setting the values of all fields of this object.
-func (deletedBranch *DeletedBranch) AfterLoad() {
-	deletedBranch.Deleted = time.Unix(deletedBranch.DeletedUnix, 0).Local()
+	ID          int64          `xorm:"pk autoincr"`
+	RepoID      int64          `xorm:"UNIQUE(s) INDEX NOT NULL"`
+	Name        string         `xorm:"UNIQUE(s) NOT NULL"`
+	Commit      string         `xorm:"UNIQUE(s) NOT NULL"`
+	DeletedByID int64          `xorm:"INDEX"`
+	DeletedBy   *User          `xorm:"-"`
+	DeletedUnix util.TimeStamp `xorm:"INDEX created"`
 }
 
 // AddDeletedBranch adds a deleted branch to the database

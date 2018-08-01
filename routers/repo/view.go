@@ -44,14 +44,14 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 
 	entries, err := tree.ListEntries()
 	if err != nil {
-		ctx.Handle(500, "ListEntries", err)
+		ctx.ServerError("ListEntries", err)
 		return
 	}
 	entries.CustomSort(base.NaturalSortLess)
 
 	ctx.Data["Files"], err = entries.GetCommitsInfo(ctx.Repo.Commit, ctx.Repo.TreePath)
 	if err != nil {
-		ctx.Handle(500, "GetCommitsInfo", err)
+		ctx.ServerError("GetCommitsInfo", err)
 		return
 	}
 
@@ -78,7 +78,7 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 
 		dataRc, err := readmeFile.DataAsync()
 		if err != nil {
-			ctx.Handle(500, "Data", err)
+			ctx.ServerError("Data", err)
 			return
 		}
 		defer dataRc.Close()
@@ -105,7 +105,9 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 					ctx.Data["FileContent"] = string(markup.Render(readmeFile.Name(), buf, treeLink, ctx.Repo.Repository.ComposeMetas()))
 				} else {
 					ctx.Data["IsRenderedHTML"] = true
-					ctx.Data["FileContent"] = string(bytes.Replace(buf, []byte("\n"), []byte(`<br>`), -1))
+					ctx.Data["FileContent"] = strings.Replace(
+						gotemplate.HTMLEscapeString(string(buf)), "\n", `<br>`, -1,
+					)
 				}
 			}
 		}
@@ -117,7 +119,7 @@ func renderDirectory(ctx *context.Context, treeLink string) {
 	if len(ctx.Repo.TreePath) > 0 {
 		latestCommit, err = ctx.Repo.Commit.GetCommitByPath(ctx.Repo.TreePath)
 		if err != nil {
-			ctx.Handle(500, "GetCommitByPath", err)
+			ctx.ServerError("GetCommitByPath", err)
 			return
 		}
 	}
@@ -145,7 +147,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 	blob := entry.Blob()
 	dataRc, err := blob.DataAsync()
 	if err != nil {
-		ctx.Handle(500, "DataAsync", err)
+		ctx.ServerError("DataAsync", err)
 		return
 	}
 	defer dataRc.Close()
@@ -179,7 +181,7 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 						ctx.Data["IsLFSFile"] = true
 						ctx.Data["FileSize"] = size
 						filenameBase64 := base64.RawURLEncoding.EncodeToString([]byte(blob.Name()))
-						ctx.Data["RawFileLink"] = fmt.Sprintf("%s%s/info/lfs/objects/%s/%s", setting.AppURL, ctx.Repo.Repository.FullName(), oid, filenameBase64)
+						ctx.Data["RawFileLink"] = fmt.Sprintf("%s%s.git/info/lfs/objects/%s/%s", setting.AppURL, ctx.Repo.Repository.FullName(), oid, filenameBase64)
 					}
 				}
 			}
@@ -208,7 +210,9 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 			ctx.Data["FileContent"] = string(markup.Render(blob.Name(), buf, path.Dir(treeLink), ctx.Repo.Repository.ComposeMetas()))
 		} else if readmeExist {
 			ctx.Data["IsRenderedHTML"] = true
-			ctx.Data["FileContent"] = string(bytes.Replace(buf, []byte("\n"), []byte(`<br>`), -1))
+			ctx.Data["FileContent"] = strings.Replace(
+				gotemplate.HTMLEscapeString(string(buf)), "\n", `<br>`, -1,
+			)
 		} else {
 			// Building code view blocks with line number on server side.
 			var fileContent string
@@ -223,6 +227,10 @@ func renderFile(ctx *context.Context, entry *git.TreeEntry, treeLink, rawLink st
 
 			var output bytes.Buffer
 			lines := strings.Split(fileContent, "\n")
+			//Remove blank line at the end of file
+			if len(lines) > 0 && lines[len(lines)-1] == "" {
+				lines = lines[:len(lines)-1]
+			}
 			for index, line := range lines {
 				line = gotemplate.HTMLEscapeString(line)
 				if index != len(lines)-1 {
@@ -288,7 +296,7 @@ func Home(ctx *context.Context) {
 		}
 	}
 
-	ctx.Handle(404, "Home", fmt.Errorf(ctx.Tr("units.error.no_unit_allowed_repo")))
+	ctx.NotFound("Home", fmt.Errorf(ctx.Tr("units.error.no_unit_allowed_repo")))
 }
 
 func renderCode(ctx *context.Context) {
@@ -362,7 +370,7 @@ func RenderUserCards(ctx *context.Context, total int, getter func(page int) ([]*
 
 	items, err := getter(pager.Current())
 	if err != nil {
-		ctx.Handle(500, "getter", err)
+		ctx.ServerError("getter", err)
 		return
 	}
 	ctx.Data["Cards"] = items
@@ -392,13 +400,13 @@ func Forks(ctx *context.Context) {
 
 	forks, err := ctx.Repo.Repository.GetForks()
 	if err != nil {
-		ctx.Handle(500, "GetForks", err)
+		ctx.ServerError("GetForks", err)
 		return
 	}
 
 	for _, fork := range forks {
 		if err = fork.GetOwner(); err != nil {
-			ctx.Handle(500, "GetOwner", err)
+			ctx.ServerError("GetOwner", err)
 			return
 		}
 	}
