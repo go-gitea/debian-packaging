@@ -2,6 +2,7 @@ gitea (1.4.3-1) UNRELEASED; urgency=medium
 
   [ Michael Lustfield ]
   * Modified package for non-free build.
+  * Added debconf options to support configuring gitea.
 
   [ Alexandre Viau ]
   * Point Vcs-* urls to salsa.debian.org.

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: gitea\n"
 "Report-Msgid-Bugs-To: gitea@packages.debian.org\n"
-"POT-Creation-Date: 2018-08-01 22:18-0500\n"
+"POT-Creation-Date: 2018-08-05 21:50-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,13 +19,13 @@ msgstr ""
 
 #. Type: password
 #. Description
-#: ../gitea.templates:1001
+#: ../gitea-common.templates:1001
 msgid "Global secret key for gitea:"
 msgstr ""
 
 #. Type: password
 #. Description
-#: ../gitea.templates:1001
+#: ../gitea-common.templates:1001
 msgid ""
 "This is the global secret key used for server security. After initial "
 "configuration, this value will be removed from the debconf database. Leave "
@@ -34,15 +34,61 @@ msgstr ""
 
 #. Type: password
 #. Description
-#: ../gitea.templates:2001
+#: ../gitea-common.templates:2001
 msgid "Global internal token for gitea:"
 msgstr ""
 
 #. Type: password
 #. Description
-#: ../gitea.templates:2001
+#: ../gitea-common.templates:2001
 msgid ""
 "This is the global internal token used for server security. After initial "
 "configuration, this value will be removed from the debconf database. Leave "
 "blank to use a generated password."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../gitea-common.templates:3001
+msgid "Domain name of this Gitea instance:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../gitea-common.templates:3001
+msgid ""
+"This address is used by the web interface to form addresses that users can "
+"copy and paste."
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../gitea-common.templates:4001
+msgid "HTTP listen port:"
+msgstr ""
+
+#. Type: string
+#. Description
+#: ../gitea-common.templates:4001
+msgid ""
+"The port Gitea will listen on for HTTP connections. This is not needed if "
+"gitea is running behind a web server, such as Nginx or Apache."
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../gitea-common.templates:5001
+msgid "Enable git-lfs support:"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../gitea-common.templates:5001
+msgid "Should git-lfs be supported on this system."
+msgstr ""
+
+#. Type: password
+#. Description
+#: ../gitea-common.templates:6001
+msgid "TODO"
 msgstr ""

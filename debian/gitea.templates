@@ -1,13 +1,38 @@
+Template: gitea/gitea-address
+Type: string
+Default: localhost:3000
+_Description: Domain and Port:
+ The address and port used by the web interface to form addresses that the user
+ can use to copy and paste commands.
+ .
+ Such as http://localhost:3000 or ssh+git://gitea@localhost.
+
 Template: gitea/secret-key
 Type: password
-_Description: Global secret key for gitea:
+_Description: Global secret key:
  This is the global secret key used for server security. After initial
- configuration, this value will be removed from the debconf database. Leave
- blank to use a generated password.
+ configuration, this value will be removed from the debconf database.
+ .
+ If unset, a unique key will be generated.
 
 Template: gitea/internal-token
 Type: password
-_Description: Global internal token for gitea:
+_Description: Global internal token:
  This is the global internal token used for server security. After initial
  configuration, this value will be removed from the debconf database. Leave
  blank to use a generated password.
+ .
+ If unset, a unique key will be generated.
+
+Template: gitea/enable-lfs
+Type: boolean
+Default: false
+_Description: Enable git-lfs:
+ Should git-lfs be supported by this gitea instance.
+
+Template: gitea/lfs-secret
+Type: password
+_Description: Global LFS JWT secret:
+ LFS authentication secret. This value must be configured if git-lfs is enabled.
+ .
+ If unset, no value will be configured.

@@ -59,10 +59,31 @@ case "$1" in
         if grep -q 'Xx-lfs-secret-xX' /etc/gitea/conf/app.ini; then
             db_get gitea/lfs-secret || true
             _SK=$(echo "$RET" | sed -e 's/[]\/$*.^|[]/\\&/g')
-            [ -n "$_SK" ] || _SK=$(date +%s%Z%N | sha384sum | base64 -w 32 | head -c 32)
             sed -i "s/Xx-lfs-secret-xX/$_SK/" /etc/gitea/conf/app.ini
             db_clear gitea/lfs-secret || true
             db_go
+        fi
+
+        # Enable git-lfs if selected
+        if grep -q 'Xx-lfs-enable-xX' /etc/gitea/conf/app.ini; then
+            db_get gitea/enable-lfs || true
+	    if "$RET"; then
+                sed -i "s/Xx-lfs-enable-xX/true/" /etc/gitea/conf/app.ini
+            else
+                sed -i "s/Xx-lfs-enable-xX/false/" /etc/gitea/conf/app.ini
+            fi
+        fi
+
+        # Set the host and port used for accessing this Gitea instance
+        if grep -q 'Xx-gitea-host-xX' /etc/gitea/conf/app.ini ||
+                grep -q 'Xx-gitea-port-xX' /etc/gitea/conf/app.ini; then
+            db_input high gitea/gitea-address || true
+            db_go
+            db_get gitea/gitea-address && address="$RET"
+            _host="${address%:*}"
+            _port="${address#*:}"
+            sed -i "s/Xx-gitea-host-xX/$_host/" /etc/gitea/conf/app.ini
+            sed -i "s/Xx-gitea-port-xX/$_port/" /etc/gitea/conf/app.ini
         fi
         ;;
 
