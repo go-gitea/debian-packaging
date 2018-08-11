@@ -1,4 +1,11 @@
-gitea (1.4.3-1) UNRELEASED; urgency=medium
+gitea (1.5.0-1) UNRELEASED; urgency=medium
+
+  * Bupmed version to 1.5.0
+  * Miscellaneous touchups.
+
+ -- Michael Lustfield <michael@lustfield.net>  Sat, 11 Aug 2018 17:26:32 -0500
+
+gitea (1.4.3-1) unstable; urgency=medium
 
   [ Michael Lustfield ]
   * Modified package for non-free build.

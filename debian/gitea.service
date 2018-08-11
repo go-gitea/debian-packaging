@@ -23,6 +23,8 @@ WorkingDirectory=/var/lib/gitea
 ExecStart=/usr/bin/gitea web
 Restart=always
 Environment=USER=gitea HOME=/var/lib/gitea GITEA_WORK_DIR=/var/lib/gitea
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
 
 [Install]
 WantedBy=multi-user.target
