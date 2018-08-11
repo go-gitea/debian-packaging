@@ -1,4 +1,5 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
+// Copyright 2018 The Gitea Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -119,6 +120,9 @@ func init() {
 		new(RepoIndexerStatus),
 		new(LFSLock),
 		new(Reaction),
+		new(IssueAssignees),
+		new(U2FRegistration),
+		new(TeamUnit),
 	)
 
 	gonicNames := []string{"SSL", "UID"}
@@ -182,6 +186,18 @@ func parsePostgreSQLHostPort(info string) (string, string) {
 	return host, port
 }
 
+func getPostgreSQLConnectionString(DBHost, DBUser, DBPasswd, DBName, DBParam, DBSSLMode string) (connStr string) {
+	host, port := parsePostgreSQLHostPort(DBHost)
+	if host[0] == '/' { // looks like a unix socket
+		connStr = fmt.Sprintf("postgres://%s:%s@:%s/%s%ssslmode=%s&host=%s",
+			url.PathEscape(DBUser), url.PathEscape(DBPasswd), port, DBName, DBParam, DBSSLMode, host)
+	} else {
+		connStr = fmt.Sprintf("postgres://%s:%s@%s:%s/%s%ssslmode=%s",
+			url.PathEscape(DBUser), url.PathEscape(DBPasswd), host, port, DBName, DBParam, DBSSLMode)
+	}
+	return
+}
+
 func parseMSSQLHostPort(info string) (string, string) {
 	host, port := "127.0.0.1", "1433"
 	if strings.Contains(info, ":") {
@@ -212,14 +228,7 @@ func getEngine() (*xorm.Engine, error) {
 				DbCfg.User, DbCfg.Passwd, DbCfg.Host, DbCfg.Name, Param)
 		}
 	case "postgres":
-		host, port := parsePostgreSQLHostPort(DbCfg.Host)
-		if host[0] == '/' { // looks like a unix socket
-			connStr = fmt.Sprintf("postgres://%s:%s@:%s/%s%ssslmode=%s&host=%s",
-				url.QueryEscape(DbCfg.User), url.QueryEscape(DbCfg.Passwd), port, DbCfg.Name, Param, DbCfg.SSLMode, host)
-		} else {
-			connStr = fmt.Sprintf("postgres://%s:%s@%s:%s/%s%ssslmode=%s",
-				url.QueryEscape(DbCfg.User), url.QueryEscape(DbCfg.Passwd), host, port, DbCfg.Name, Param, DbCfg.SSLMode)
-		}
+		connStr = getPostgreSQLConnectionString(DbCfg.Host, DbCfg.User, DbCfg.Passwd, DbCfg.Name, Param, DbCfg.SSLMode)
 	case "mssql":
 		host, port := parseMSSQLHostPort(DbCfg.Host)
 		connStr = fmt.Sprintf("server=%s; port=%s; database=%s; user id=%s; password=%s;", host, port, DbCfg.Name, DbCfg.User, DbCfg.Passwd)
@@ -270,7 +279,7 @@ func SetEngine() (err error) {
 	// WARNING: for serv command, MUST remove the output to os.stdout,
 	// so use log file to instead print to stdout.
 	x.SetLogger(log.XORMLogger)
-	x.ShowSQL(true)
+	x.ShowSQL(setting.LogSQL)
 	return nil
 }
 
@@ -335,7 +344,10 @@ func GetStatistic() (stats Statistic) {
 
 // Ping tests if database is alive
 func Ping() error {
-	return x.Ping()
+	if x != nil {
+		return x.Ping()
+	}
+	return errors.New("database not configured")
 }
 
 // DumpDatabase dumps all data from database according the special database SQL syntax to file system.

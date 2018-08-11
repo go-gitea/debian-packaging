@@ -1,10 +1,10 @@
 workspace:
-  base: /srv/app
+  base: /go
   path: src/code.gitea.io/gitea
 
 clone:
   git:
-    image: plugins/git:1
+    image: plugins/git:next
     depth: 50
     tags: true
 
@@ -56,27 +56,26 @@ pipeline:
       event: [ push, tag, pull_request ]
 
   build-without-gcc:
-    image: webhippie/golang:1.8
+    image: golang:1.8
     pull: true
-    environment:
-      GOPATH: /srv/app
     commands:
       - go build -o gitea_no_gcc # test if build succeeds without the sqlite tag
     when:
       event: [ push, tag, pull_request ]
 
   build:
-    image: webhippie/golang:edge
+    image: golang:1.10
     pull: true
     environment:
       TAGS: bindata sqlite
-      GOPATH: /srv/app
     commands:
       - make clean
       - make generate
       - make vet
       - make lint
       - make fmt-check
+      - make swagger-check
+#      - make swagger-validate
       - make misspell-check
       - make test-vendor
       - make build
@@ -84,12 +83,11 @@ pipeline:
       event: [ push, tag, pull_request ]
 
   test:
-    image: webhippie/golang:edge
+    image: golang:1.10
     pull: true
     group: test
     environment:
       TAGS: bindata sqlite
-      GOPATH: /srv/app
     commands:
       - make unit-test-coverage
     when:
@@ -97,12 +95,11 @@ pipeline:
       branch: [ master ]
 
   test:
-    image: webhippie/golang:edge
+    image: golang:1.10
     pull: true
     group: test
     environment:
       TAGS: bindata sqlite
-      GOPATH: /srv/app
     commands:
       - make test
     when:
@@ -110,12 +107,11 @@ pipeline:
       branch: [ release/* ]
 
   test:
-    image: webhippie/golang:edge
+    image: golang:1.10
     pull: true
     group: test
     environment:
       TAGS: bindata
-      GOPATH: /srv/app
     commands:
       - make test
     when:
@@ -123,60 +119,64 @@ pipeline:
 
   # Commented until db locking have been resolved!
   # test-sqlite:
-  #   image: webhippie/golang:edge
+  #   image: golang:1.10
   #   pull: true
   #   group: test
   #   environment:
   #     TAGS: bindata
-  #     GOPATH: /srv/app
   #   commands:
   #     - make test-sqlite
   #   when:
   #     event: [ push, tag, pull_request ]
 
   test-mysql:
-    image: webhippie/golang:edge
+    image: golang:1.10
     pull: true
     group: test
     environment:
       TAGS: bindata
-      GOPATH: /srv/app
+      TEST_LDAP: "1"
     commands:
+      - curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash
+      - apt-get install -y git-lfs
       - make integration-test-coverage
     when:
       event: [ push, pull_request ]
       branch: [ master ]
 
   test-mysql:
-    image: webhippie/golang:edge
+    image: golang:1.10
     pull: true
     group: test
     environment:
       TAGS: bindata
-      GOPATH: /srv/app
+      TEST_LDAP: "1"
     commands:
+      - curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash
+      - apt-get install -y git-lfs
       - make test-mysql
     when:
       event: [ tag ]
 
   test-pgsql:
-    image: webhippie/golang:edge
+    image: golang:1.10
     pull: true
     group: test
     environment:
       TAGS: bindata
-      GOPATH: /srv/app
+      TEST_LDAP: "1"
     commands:
+      - curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash
+      - apt-get install -y git-lfs
       - make test-pgsql
     when:
       event: [ push, tag, pull_request ]
 
   generate-coverage:
-    image: webhippie/golang:edge
+    image: golang:1.10
     pull: true
     environment:
       TAGS: bindata
-      GOPATH: /srv/app
     commands:
       - make coverage
     when:
@@ -197,8 +197,8 @@ pipeline:
     pull: true
     environment:
       TAGS: bindata sqlite
-      GOPATH: /srv/app
     commands:
+      - export PATH=$PATH:$GOPATH/bin
       - make release
     when:
       event: [ push, tag ]
@@ -237,16 +237,7 @@ pipeline:
       branch: [ master ]
 
   docker:
-    image: plugins/docker:17.05
-    pull: true
-    secrets: [ docker_username, docker_password ]
-    repo: gitea/gitea
-    tags: [ '${DRONE_TAG##v}' ]
-    when:
-      event: [ tag ]
-
-  docker:
-    image: plugins/docker:17.05
+    image: plugins/docker:17.12
     pull: true
     secrets: [ docker_username, docker_password ]
     repo: gitea/gitea
@@ -256,14 +247,25 @@ pipeline:
       branch: [ release/* ]
 
   docker:
-    image: plugins/docker:17.05
-    pull: true
+    image: plugins/docker:17.12
     secrets: [ docker_username, docker_password ]
+    pull: true
     repo: gitea/gitea
-    tags: [ 'latest' ]
+    default_tags: true
     when:
-      event: [ push ]
-      branch: [ master ]
+      event: [ push, tag ]
+
+  gpg-sign:
+    image: plugins/gpgsign:1
+    pull: true
+    secrets: [ gpgsign_key, gpgsign_passphrase ]
+    detach_sign: true
+    files:
+      - dist/release/*
+    excludes:
+      - dist/release/*.sha256
+    when:
+      event: [ push, tag ]
 
   release:
     image: plugins/s3:1
@@ -349,5 +351,10 @@ services:
     image: postgres:9.5
     environment:
       - POSTGRES_DB=test
+    when:
+      event: [ push, tag, pull_request ]
+
+  ldap:
+    image: gitea/test-openldap:latest
     when:
       event: [ push, tag, pull_request ]

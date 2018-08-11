@@ -1,4 +1,5 @@
 // Copyright 2016 The Gogs Authors. All rights reserved.
+// Copyright 2018 The Gitea Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -8,12 +9,13 @@ import (
 	"fmt"
 	"strings"
 
-	api "code.gitea.io/sdk/gitea"
-
 	"code.gitea.io/gitea/models"
 	"code.gitea.io/gitea/modules/context"
+	"code.gitea.io/gitea/modules/indexer"
 	"code.gitea.io/gitea/modules/setting"
 	"code.gitea.io/gitea/modules/util"
+
+	api "code.gitea.io/sdk/gitea"
 )
 
 // ListIssues list the issues of a repository
@@ -42,6 +44,10 @@ func ListIssues(ctx *context.APIContext) {
 	//   in: query
 	//   description: page number of requested issues
 	//   type: integer
+	// - name: q
+	//   in: query
+	//   description: search string
+	//   type: string
 	// responses:
 	//   "200":
 	//     "$ref": "#/responses/IssueList"
@@ -55,12 +61,30 @@ func ListIssues(ctx *context.APIContext) {
 		isClosed = util.OptionalBoolFalse
 	}
 
-	issues, err := models.Issues(&models.IssuesOptions{
-		RepoIDs:  []int64{ctx.Repo.Repository.ID},
-		Page:     ctx.QueryInt("page"),
-		PageSize: setting.UI.IssuePagingNum,
-		IsClosed: isClosed,
-	})
+	var issues []*models.Issue
+
+	keyword := strings.Trim(ctx.Query("q"), " ")
+	if strings.IndexByte(keyword, 0) >= 0 {
+		keyword = ""
+	}
+	var issueIDs []int64
+	var err error
+	if len(keyword) > 0 {
+		issueIDs, err = indexer.SearchIssuesByKeyword(ctx.Repo.Repository.ID, keyword)
+	}
+
+	// Only fetch the issues if we either don't have a keyword or the search returned issues
+	// This would otherwise return all issues if no issues were found by the search.
+	if len(keyword) == 0 || len(issueIDs) > 0 {
+		issues, err = models.Issues(&models.IssuesOptions{
+			RepoIDs:  []int64{ctx.Repo.Repository.ID},
+			Page:     ctx.QueryInt("page"),
+			PageSize: setting.UI.IssuePagingNum,
+			IsClosed: isClosed,
+			IssueIDs: issueIDs,
+		})
+	}
+
 	if err != nil {
 		ctx.Error(500, "Issues", err)
 		return
@@ -140,33 +164,44 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 	// responses:
 	//   "201":
 	//     "$ref": "#/responses/Issue"
+
+	var deadlineUnix util.TimeStamp
+	if form.Deadline != nil && ctx.Repo.IsWriter() {
+		deadlineUnix = util.TimeStamp(form.Deadline.Unix())
+	}
+
 	issue := &models.Issue{
-		RepoID:   ctx.Repo.Repository.ID,
-		Title:    form.Title,
-		PosterID: ctx.User.ID,
-		Poster:   ctx.User,
-		Content:  form.Body,
+		RepoID:       ctx.Repo.Repository.ID,
+		Title:        form.Title,
+		PosterID:     ctx.User.ID,
+		Poster:       ctx.User,
+		Content:      form.Body,
+		DeadlineUnix: deadlineUnix,
 	}
 
+	var assigneeIDs = make([]int64, 0)
+	var err error
 	if ctx.Repo.IsWriter() {
-		if len(form.Assignee) > 0 {
-			assignee, err := models.GetUserByName(form.Assignee)
-			if err != nil {
-				if models.IsErrUserNotExist(err) {
-					ctx.Error(422, "", fmt.Sprintf("Assignee does not exist: [name: %s]", form.Assignee))
-				} else {
-					ctx.Error(500, "GetUserByName", err)
-				}
-				return
-			}
-			issue.AssigneeID = assignee.ID
-		}
 		issue.MilestoneID = form.Milestone
+		assigneeIDs, err = models.MakeIDsFromAPIAssigneesToAdd(form.Assignee, form.Assignees)
+		if err != nil {
+			if models.IsErrUserNotExist(err) {
+				ctx.Error(422, "", fmt.Sprintf("Assignee does not exist: [name: %s]", err))
+			} else {
+				ctx.Error(500, "AddAssigneeByName", err)
+			}
+			return
+		}
 	} else {
-		form.Labels = nil
+		// setting labels is not allowed if user is not a writer
+		form.Labels = make([]int64, 0)
 	}
 
-	if err := models.NewIssue(ctx.Repo.Repository, issue, form.Labels, nil); err != nil {
+	if err := models.NewIssue(ctx.Repo.Repository, issue, form.Labels, assigneeIDs, nil); err != nil {
+		if models.IsErrUserDoesNotHaveAccessToRepo(err) {
+			ctx.Error(400, "UserDoesNotHaveAccessToRepo", err)
+			return
+		}
 		ctx.Error(500, "NewIssue", err)
 		return
 	}
@@ -179,7 +214,6 @@ func CreateIssue(ctx *context.APIContext, form api.CreateIssueOption) {
 	}
 
 	// Refetch from database to assign some automatic values
-	var err error
 	issue, err = models.GetIssueByID(issue.ID)
 	if err != nil {
 		ctx.Error(500, "GetIssueByID", err)
@@ -242,28 +276,39 @@ func EditIssue(ctx *context.APIContext, form api.EditIssueOption) {
 		issue.Content = *form.Body
 	}
 
-	if ctx.Repo.IsWriter() && form.Assignee != nil &&
-		(issue.Assignee == nil || issue.Assignee.LowerName != strings.ToLower(*form.Assignee)) {
-		if len(*form.Assignee) == 0 {
-			issue.AssigneeID = 0
-		} else {
-			assignee, err := models.GetUserByName(*form.Assignee)
-			if err != nil {
-				if models.IsErrUserNotExist(err) {
-					ctx.Error(422, "", fmt.Sprintf("assignee does not exist: [name: %s]", *form.Assignee))
-				} else {
-					ctx.Error(500, "GetUserByName", err)
-				}
-				return
-			}
-			issue.AssigneeID = assignee.ID
+	// Update the deadline
+	var deadlineUnix util.TimeStamp
+	if form.Deadline != nil && !form.Deadline.IsZero() {
+		deadlineUnix = util.TimeStamp(form.Deadline.Unix())
+	}
+
+	if err := models.UpdateIssueDeadline(issue, deadlineUnix, ctx.User); err != nil {
+		ctx.Error(500, "UpdateIssueDeadline", err)
+		return
+	}
+
+	// Add/delete assignees
+
+	// Deleting is done the Github way (quote from their api documentation):
+	// https://developer.github.com/v3/issues/#edit-an-issue
+	// "assignees" (array): Logins for Users to assign to this issue.
+	// Pass one or more user logins to replace the set of assignees on this Issue.
+	// Send an empty array ([]) to clear all assignees from the Issue.
+
+	if ctx.Repo.IsWriter() && (form.Assignees != nil || form.Assignee != nil) {
+
+		oneAssignee := ""
+		if form.Assignee != nil {
+			oneAssignee = *form.Assignee
 		}
 
-		if err = models.UpdateIssueUserByAssignee(issue); err != nil {
-			ctx.Error(500, "UpdateIssueUserByAssignee", err)
+		err = models.UpdateAPIAssignee(issue, oneAssignee, form.Assignees, ctx.User)
+		if err != nil {
+			ctx.Error(500, "UpdateAPIAssignee", err)
 			return
 		}
 	}
+
 	if ctx.Repo.IsWriter() && form.Milestone != nil &&
 		issue.MilestoneID != *form.Milestone {
 		oldMilestoneID := issue.MilestoneID

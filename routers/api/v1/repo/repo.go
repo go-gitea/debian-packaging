@@ -16,6 +16,7 @@ import (
 	"code.gitea.io/gitea/modules/setting"
 	"code.gitea.io/gitea/modules/util"
 	"code.gitea.io/gitea/routers/api/v1/convert"
+
 	api "code.gitea.io/sdk/gitea"
 )
 
@@ -305,15 +306,22 @@ func Migrate(ctx *context.APIContext, form auth.MigrateRepoForm) {
 		return
 	}
 
-	if ctxUser.IsOrganization() && !ctx.User.IsAdmin {
-		// Check ownership of organization.
-		isOwner, err := ctxUser.IsOwnedBy(ctx.User.ID)
-		if err != nil {
-			ctx.Error(500, "IsOwnedBy", err)
+	if !ctx.User.IsAdmin {
+		if !ctxUser.IsOrganization() && ctx.User.ID != ctxUser.ID {
+			ctx.Error(403, "", "Given user is not an organization.")
 			return
-		} else if !isOwner {
-			ctx.Error(403, "", "Given user is not owner of organization.")
-			return
+		}
+
+		if ctxUser.IsOrganization() {
+			// Check ownership of organization.
+			isOwner, err := ctxUser.IsOwnedBy(ctx.User.ID)
+			if err != nil {
+				ctx.Error(500, "IsOwnedBy", err)
+				return
+			} else if !isOwner {
+				ctx.Error(403, "", "Given user is not owner of organization.")
+				return
+			}
 		}
 	}
 
@@ -499,4 +507,46 @@ func MirrorSync(ctx *context.APIContext) {
 
 	go models.MirrorQueue.Add(repo.ID)
 	ctx.Status(200)
+}
+
+// TopicSearch search for creating topic
+func TopicSearch(ctx *context.Context) {
+	// swagger:operation GET /topics/search repository topicSearch
+	// ---
+	// summary: search topics via keyword
+	// produces:
+	//   - application/json
+	// parameters:
+	//   - name: q
+	//     in: query
+	//     description: keywords to search
+	//     required: true
+	//     type: string
+	// responses:
+	//   "200":
+	//     "$ref": "#/responses/Repository"
+	if ctx.User == nil {
+		ctx.JSON(403, map[string]interface{}{
+			"message": "Only owners could change the topics.",
+		})
+		return
+	}
+
+	kw := ctx.Query("q")
+
+	topics, err := models.FindTopics(&models.FindTopicOptions{
+		Keyword: kw,
+		Limit:   10,
+	})
+	if err != nil {
+		log.Error(2, "SearchTopics failed: %v", err)
+		ctx.JSON(500, map[string]interface{}{
+			"message": "Search topics failed.",
+		})
+		return
+	}
+
+	ctx.JSON(200, map[string]interface{}{
+		"topics": topics,
+	})
 }

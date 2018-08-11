@@ -199,6 +199,8 @@ type Repository struct {
 	BaseRepo      *Repository        `xorm:"-"`
 	Size          int64              `xorm:"NOT NULL DEFAULT 0"`
 	IndexerStatus *RepoIndexerStatus `xorm:"-"`
+	IsFsckEnabled bool               `xorm:"NOT NULL DEFAULT true"`
+	Topics        []string           `xorm:"TEXT JSON"`
 
 	CreatedUnix util.TimeStamp `xorm:"INDEX created"`
 	UpdatedUnix util.TimeStamp `xorm:"INDEX updated"`
@@ -363,22 +365,14 @@ func (repo *Repository) getUnitsByUserID(e Engine, userID int64, isAdmin bool) (
 		return err
 	}
 
-	var allTypes = make(map[UnitType]struct{}, len(allRepUnitTypes))
-	for _, team := range teams {
-		// Administrators can not be limited
-		if team.Authorize >= AccessModeAdmin {
-			return nil
-		}
-		for _, unitType := range team.UnitTypes {
-			allTypes[unitType] = struct{}{}
-		}
-	}
-
 	// unique
 	var newRepoUnits = make([]*RepoUnit, 0, len(repo.Units))
 	for _, u := range repo.Units {
-		if _, ok := allTypes[u.Type]; ok {
-			newRepoUnits = append(newRepoUnits, u)
+		for _, team := range teams {
+			if team.UnitEnabled(u.Type) {
+				newRepoUnits = append(newRepoUnits, u)
+				break
+			}
 		}
 	}
 
@@ -598,9 +592,9 @@ func (repo *Repository) GetAssignees() (_ []*User, err error) {
 	return repo.getAssignees(x)
 }
 
-// GetAssigneeByID returns the user that has write access of repository by given ID.
-func (repo *Repository) GetAssigneeByID(userID int64) (*User, error) {
-	return GetAssigneeByID(repo, userID)
+// GetUserIfHasWriteAccess returns the user that has write access of repository by given ID.
+func (repo *Repository) GetUserIfHasWriteAccess(userID int64) (*User, error) {
+	return GetUserIfHasWriteAccess(repo, userID)
 }
 
 // GetMilestoneByID returns the milestone belongs to repository by given ID.
@@ -1353,6 +1347,12 @@ func createRepository(e *xorm.Session, doer, u *User, repo *Repository) (err err
 				Type:   tp,
 				Config: &IssuesConfig{EnableTimetracker: setting.Service.DefaultEnableTimetracking, AllowOnlyContributorsToTrackTime: setting.Service.DefaultAllowOnlyContributorsToTrackTime},
 			})
+		} else if tp == UnitTypePullRequests {
+			units = append(units, RepoUnit{
+				RepoID: repo.ID,
+				Type:   tp,
+				Config: &PullRequestsConfig{AllowMerge: true, AllowRebase: true, AllowSquash: true},
+			})
 		} else {
 			units = append(units, RepoUnit{
 				RepoID: repo.ID,
@@ -1407,7 +1407,7 @@ func createRepository(e *xorm.Session, doer, u *User, repo *Repository) (err err
 
 // CreateRepository creates a repository for the user/organization u.
 func CreateRepository(doer, u *User, opts CreateRepoOptions) (_ *Repository, err error) {
-	if !u.CanCreateRepo() {
+	if !doer.IsAdmin && !u.CanCreateRepo() {
 		return nil, ErrReachLimitOfRepo{u.MaxRepoCreation}
 	}
 
@@ -1849,6 +1849,9 @@ func DeleteRepository(doer *User, uid, repoID int64) error {
 		if _, err = sess.In("issue_id", issueIDs).Delete(&Reaction{}); err != nil {
 			return err
 		}
+		if _, err = sess.In("issue_id", issueIDs).Delete(&IssueWatch{}); err != nil {
+			return err
+		}
 
 		attachments := make([]*Attachment, 0, 5)
 		if err = sess.
@@ -1951,7 +1954,7 @@ func DeleteRepository(doer *User, uid, repoID int64) error {
 func GetRepositoryByOwnerAndName(ownerName, repoName string) (*Repository, error) {
 	var repo Repository
 	has, err := x.Select("repository.*").
-		Join("INNER", "user", "`user`.id = repository.owner_id").
+		Join("INNER", "`user`", "`user`.id = repository.owner_id").
 		Where("repository.lower_name = ?", strings.ToLower(repoName)).
 		And("`user`.lower_name = ?", strings.ToLower(ownerName)).
 		Get(&repo)
@@ -1992,6 +1995,12 @@ func getRepositoryByID(e Engine, id int64) (*Repository, error) {
 // GetRepositoryByID returns the repository by given id if exists.
 func GetRepositoryByID(id int64) (*Repository, error) {
 	return getRepositoryByID(x, id)
+}
+
+// GetRepositoriesMapByIDs returns the repositories by given id slice.
+func GetRepositoriesMapByIDs(ids []int64) (map[int64]*Repository, error) {
+	var repos = make(map[int64]*Repository, len(ids))
+	return repos, x.In("id", ids).Find(&repos)
 }
 
 // GetUserRepositories returns a list of repositories of given user.
@@ -2216,11 +2225,12 @@ func GitFsck() {
 	log.Trace("Doing: GitFsck")
 
 	if err := x.
-		Where("id>0").BufferSize(setting.IterateBufferSize).
+		Where("id>0 AND is_fsck_enabled=?", true).BufferSize(setting.IterateBufferSize).
 		Iterate(new(Repository),
 			func(idx int, bean interface{}) error {
 				repo := bean.(*Repository)
 				repoPath := repo.RepoPath()
+				log.Trace("Running health check on repository %s", repoPath)
 				if err := git.Fsck(repoPath, setting.Cron.RepoHealthCheck.Timeout, setting.Cron.RepoHealthCheck.Args...); err != nil {
 					desc := fmt.Sprintf("Failed to health check repository (%s): %v", repoPath, err)
 					log.Warn(desc)
@@ -2232,6 +2242,7 @@ func GitFsck() {
 			}); err != nil {
 		log.Error(4, "GitFsck: %v", err)
 	}
+	log.Trace("Finished: GitFsck")
 }
 
 // GitGcRepos calls 'git gc' to remove unnecessary files and optimize the local repository
@@ -2449,6 +2460,19 @@ func ForkRepository(doer, u *User, oldRepo *Repository, name, desc string) (_ *R
 	err = sess.Commit()
 	if err != nil {
 		return nil, err
+	}
+
+	oldMode, _ := AccessLevel(doer.ID, oldRepo)
+	mode, _ := AccessLevel(doer.ID, repo)
+
+	if err = PrepareWebhooks(oldRepo, HookEventFork, &api.ForkPayload{
+		Forkee: oldRepo.APIFormat(oldMode),
+		Repo:   repo.APIFormat(mode),
+		Sender: doer.APIFormat(),
+	}); err != nil {
+		log.Error(2, "PrepareWebhooks [repo_id: %d]: %v", oldRepo.ID, err)
+	} else {
+		go HookQueue.Add(oldRepo.ID)
 	}
 
 	if err = repo.UpdateSize(); err != nil {

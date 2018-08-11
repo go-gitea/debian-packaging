@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"code.gitea.io/git"
+	"code.gitea.io/gitea/modules/log"
 	"code.gitea.io/gitea/modules/process"
 	"code.gitea.io/gitea/modules/setting"
 	"code.gitea.io/gitea/modules/util"
@@ -53,7 +54,7 @@ func (r *Release) loadAttributes(e Engine) error {
 			return err
 		}
 	}
-	return nil
+	return GetReleaseAttachments(r)
 }
 
 // LoadAttributes load repo and publisher attributes for a release
@@ -79,6 +80,10 @@ func (r *Release) TarURL() string {
 
 // APIFormat convert a Release to api.Release
 func (r *Release) APIFormat() *api.Release {
+	assets := make([]*api.Attachment, 0)
+	for _, att := range r.Attachments {
+		assets = append(assets, att.APIFormat())
+	}
 	return &api.Release{
 		ID:           r.ID,
 		TagName:      r.TagName,
@@ -92,6 +97,7 @@ func (r *Release) APIFormat() *api.Release {
 		CreatedAt:    r.CreatedUnix.AsTime(),
 		PublishedAt:  r.CreatedUnix.AsTime(),
 		Publisher:    r.Publisher.APIFormat(),
+		Attachments:  assets,
 	}
 }
 
@@ -185,8 +191,29 @@ func CreateRelease(gitRepo *git.Repository, rel *Release, attachmentUUIDs []stri
 	}
 
 	err = addReleaseAttachments(rel.ID, attachmentUUIDs)
+	if err != nil {
+		return err
+	}
 
-	return err
+	if !rel.IsDraft {
+		if err := rel.LoadAttributes(); err != nil {
+			log.Error(2, "LoadAttributes: %v", err)
+		} else {
+			mode, _ := AccessLevel(rel.PublisherID, rel.Repo)
+			if err := PrepareWebhooks(rel.Repo, HookEventRelease, &api.ReleasePayload{
+				Action:     api.HookReleasePublished,
+				Release:    rel.APIFormat(),
+				Repository: rel.Repo.APIFormat(mode),
+				Sender:     rel.Publisher.APIFormat(),
+			}); err != nil {
+				log.Error(2, "PrepareWebhooks: %v", err)
+			} else {
+				go HookQueue.Add(rel.Repo.ID)
+			}
+		}
+	}
+
+	return nil
 }
 
 // GetRelease returns release by given ID.
@@ -346,7 +373,7 @@ func SortReleases(rels []*Release) {
 }
 
 // UpdateRelease updates information of a release.
-func UpdateRelease(gitRepo *git.Repository, rel *Release, attachmentUUIDs []string) (err error) {
+func UpdateRelease(doer *User, gitRepo *git.Repository, rel *Release, attachmentUUIDs []string) (err error) {
 	if err = createTag(gitRepo, rel); err != nil {
 		return err
 	}
@@ -357,7 +384,24 @@ func UpdateRelease(gitRepo *git.Repository, rel *Release, attachmentUUIDs []stri
 		return err
 	}
 
+	err = rel.loadAttributes(x)
+	if err != nil {
+		return err
+	}
+
 	err = addReleaseAttachments(rel.ID, attachmentUUIDs)
+
+	mode, _ := accessLevel(x, doer.ID, rel.Repo)
+	if err1 := PrepareWebhooks(rel.Repo, HookEventRelease, &api.ReleasePayload{
+		Action:     api.HookReleaseUpdated,
+		Release:    rel.APIFormat(),
+		Repository: rel.Repo.APIFormat(mode),
+		Sender:     rel.Publisher.APIFormat(),
+	}); err1 != nil {
+		log.Error(2, "PrepareWebhooks: %v", err)
+	} else {
+		go HookQueue.Add(rel.Repo.ID)
+	}
 
 	return err
 }
@@ -402,6 +446,23 @@ func DeleteReleaseByID(id int64, u *User, delTag bool) error {
 		if _, err = x.ID(rel.ID).AllCols().Update(rel); err != nil {
 			return fmt.Errorf("Update: %v", err)
 		}
+	}
+
+	rel.Repo = repo
+	if err = rel.LoadAttributes(); err != nil {
+		return fmt.Errorf("LoadAttributes: %v", err)
+	}
+
+	mode, _ := accessLevel(x, u.ID, rel.Repo)
+	if err := PrepareWebhooks(rel.Repo, HookEventRelease, &api.ReleasePayload{
+		Action:     api.HookReleaseDeleted,
+		Release:    rel.APIFormat(),
+		Repository: rel.Repo.APIFormat(mode),
+		Sender:     rel.Publisher.APIFormat(),
+	}); err != nil {
+		log.Error(2, "PrepareWebhooks: %v", err)
+	} else {
+		go HookQueue.Add(rel.Repo.ID)
 	}
 
 	return nil
