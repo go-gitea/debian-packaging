@@ -102,7 +102,7 @@ func IsErrEmailAlreadyUsed(err error) bool {
 }
 
 func (err ErrEmailAlreadyUsed) Error() string {
-	return fmt.Sprintf("e-mail has been used [email: %s]", err.Email)
+	return fmt.Sprintf("e-mail already in use [email: %s]", err.Email)
 }
 
 // ErrOpenIDAlreadyUsed represents a "OpenIDAlreadyUsed" kind of error.
@@ -117,7 +117,7 @@ func IsErrOpenIDAlreadyUsed(err error) bool {
 }
 
 func (err ErrOpenIDAlreadyUsed) Error() string {
-	return fmt.Sprintf("OpenID has been used [oid: %s]", err.OpenID)
+	return fmt.Sprintf("OpenID already in use [oid: %s]", err.OpenID)
 }
 
 // ErrUserOwnRepos represents a "UserOwnRepos" kind of error.
@@ -733,6 +733,22 @@ func (err ErrRepoFileAlreadyExist) Error() string {
 	return fmt.Sprintf("repository file already exists [file_name: %s]", err.FileName)
 }
 
+// ErrUserDoesNotHaveAccessToRepo represets an error where the user doesn't has access to a given repo
+type ErrUserDoesNotHaveAccessToRepo struct {
+	UserID   int64
+	RepoName string
+}
+
+// IsErrUserDoesNotHaveAccessToRepo checks if an error is a ErrRepoFileAlreadyExist.
+func IsErrUserDoesNotHaveAccessToRepo(err error) bool {
+	_, ok := err.(ErrUserDoesNotHaveAccessToRepo)
+	return ok
+}
+
+func (err ErrUserDoesNotHaveAccessToRepo) Error() string {
+	return fmt.Sprintf("user doesn't have acces to repo [user_id: %d, repo_name: %s]", err.UserID, err.RepoName)
+}
+
 // __________                             .__
 // \______   \____________    ____   ____ |  |__
 //  |    |  _/\_  __ \__  \  /    \_/ ___\|  |  \
@@ -783,6 +799,21 @@ func IsErrBranchNameConflict(err error) bool {
 
 func (err ErrBranchNameConflict) Error() string {
 	return fmt.Sprintf("branch conflicts with existing branch [name: %s]", err.BranchName)
+}
+
+// ErrNotAllowedToMerge represents an error that a branch is protected and the current user is not allowed to modify it
+type ErrNotAllowedToMerge struct {
+	Reason string
+}
+
+// IsErrNotAllowedToMerge checks if an error is an ErrNotAllowedToMerge.
+func IsErrNotAllowedToMerge(err error) bool {
+	_, ok := err.(ErrNotAllowedToMerge)
+	return ok
+}
+
+func (err ErrNotAllowedToMerge) Error() string {
+	return fmt.Sprintf("not allowed to merge [reason: %s]", err.Reason)
 }
 
 // ErrTagAlreadyExists represents an error that tag with such name already exists
@@ -1205,4 +1236,26 @@ func IsErrExternalLoginUserNotExist(err error) bool {
 
 func (err ErrExternalLoginUserNotExist) Error() string {
 	return fmt.Sprintf("external login user link does not exists [userID: %d, loginSourceID: %d]", err.UserID, err.LoginSourceID)
+}
+
+// ____ ________________________________              .__          __                 __  .__
+// |    |   \_____  \_   _____/\______   \ ____   ____ |__| _______/  |_____________ _/  |_|__| ____   ____
+// |    |   //  ____/|    __)   |       _// __ \ / ___\|  |/  ___/\   __\_  __ \__  \\   __\  |/  _ \ /    \
+// |    |  //       \|     \    |    |   \  ___// /_/  >  |\___ \  |  |  |  | \// __ \|  | |  (  <_> )   |  \
+// |______/ \_______ \___  /    |____|_  /\___  >___  /|__/____  > |__|  |__|  (____  /__| |__|\____/|___|  /
+// \/   \/            \/     \/_____/         \/                   \/                    \/
+
+// ErrU2FRegistrationNotExist represents a "ErrU2FRegistrationNotExist" kind of error.
+type ErrU2FRegistrationNotExist struct {
+	ID int64
+}
+
+func (err ErrU2FRegistrationNotExist) Error() string {
+	return fmt.Sprintf("U2F registration does not exist [id: %d]", err.ID)
+}
+
+// IsErrU2FRegistrationNotExist checks if an error is a ErrU2FRegistrationNotExist.
+func IsErrU2FRegistrationNotExist(err error) bool {
+	_, ok := err.(ErrU2FRegistrationNotExist)
+	return ok
 }

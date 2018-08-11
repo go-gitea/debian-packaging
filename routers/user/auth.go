@@ -1,4 +1,5 @@
 // Copyright 2014 The Gogs Authors. All rights reserved.
+// Copyright 2018 The Gitea Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -22,6 +23,7 @@ import (
 
 	"github.com/go-macaron/captcha"
 	"github.com/markbates/goth"
+	"github.com/tstranex/u2f"
 )
 
 const (
@@ -36,6 +38,7 @@ const (
 	tplTwofa          base.TplName = "user/auth/twofa"
 	tplTwofaScratch   base.TplName = "user/auth/twofa_scratch"
 	tplLinkAccount    base.TplName = "user/auth/link_account"
+	tplU2F            base.TplName = "user/auth/u2f"
 )
 
 // AutoSignIn reads cookie and try to auto-login.
@@ -160,7 +163,6 @@ func SignInPost(ctx *context.Context, form auth.SignInForm) {
 		}
 		return
 	}
-
 	// If this user is enrolled in 2FA, we can't sign the user in just yet.
 	// Instead, redirect them to the 2FA authentication page.
 	_, err = models.GetTwoFactorByUID(u.ID)
@@ -176,6 +178,13 @@ func SignInPost(ctx *context.Context, form auth.SignInForm) {
 	// User needs to use 2FA, save data and redirect to 2FA page.
 	ctx.Session.Set("twofaUid", u.ID)
 	ctx.Session.Set("twofaRemember", form.Remember)
+
+	regs, err := models.GetU2FRegistrationsByUID(u.ID)
+	if err == nil && len(regs) > 0 {
+		ctx.Redirect(setting.AppSubURL + "/user/u2f")
+		return
+	}
+
 	ctx.Redirect(setting.AppSubURL + "/user/two_factor")
 }
 
@@ -222,7 +231,7 @@ func TwoFactorPost(ctx *context.Context, form auth.TwoFactorAuthForm) {
 		return
 	}
 
-	if ok {
+	if ok && twofa.LastUsedPasscode != form.Passcode {
 		remember := ctx.Session.Get("twofaRemember").(bool)
 		u, err := models.GetUserByID(id)
 		if err != nil {
@@ -242,6 +251,12 @@ func TwoFactorPost(ctx *context.Context, form auth.TwoFactorAuthForm) {
 				ctx.ServerError("UserSignIn", err)
 				return
 			}
+		}
+
+		twofa.LastUsedPasscode = form.Passcode
+		if err = models.UpdateTwoFactor(twofa); err != nil {
+			ctx.ServerError("UserSignIn", err)
+			return
 		}
 
 		handleSignIn(ctx, u, remember)
@@ -305,11 +320,114 @@ func TwoFactorScratchPost(ctx *context.Context, form auth.TwoFactorScratchAuthFo
 
 		handleSignInFull(ctx, u, remember, false)
 		ctx.Flash.Info(ctx.Tr("auth.twofa_scratch_used"))
-		ctx.Redirect(setting.AppSubURL + "/user/settings/two_factor")
+		ctx.Redirect(setting.AppSubURL + "/user/settings/security")
 		return
 	}
 
 	ctx.RenderWithErr(ctx.Tr("auth.twofa_scratch_token_incorrect"), tplTwofaScratch, auth.TwoFactorScratchAuthForm{})
+}
+
+// U2F shows the U2F login page
+func U2F(ctx *context.Context) {
+	ctx.Data["Title"] = ctx.Tr("twofa")
+	ctx.Data["RequireU2F"] = true
+	// Check auto-login.
+	if checkAutoLogin(ctx) {
+		return
+	}
+
+	// Ensure user is in a 2FA session.
+	if ctx.Session.Get("twofaUid") == nil {
+		ctx.ServerError("UserSignIn", errors.New("not in U2F session"))
+		return
+	}
+
+	ctx.HTML(200, tplU2F)
+}
+
+// U2FChallenge submits a sign challenge to the browser
+func U2FChallenge(ctx *context.Context) {
+	// Ensure user is in a U2F session.
+	idSess := ctx.Session.Get("twofaUid")
+	if idSess == nil {
+		ctx.ServerError("UserSignIn", errors.New("not in U2F session"))
+		return
+	}
+	id := idSess.(int64)
+	regs, err := models.GetU2FRegistrationsByUID(id)
+	if err != nil {
+		ctx.ServerError("UserSignIn", err)
+		return
+	}
+	if len(regs) == 0 {
+		ctx.ServerError("UserSignIn", errors.New("no device registered"))
+		return
+	}
+	challenge, err := u2f.NewChallenge(setting.U2F.AppID, setting.U2F.TrustedFacets)
+	if err = ctx.Session.Set("u2fChallenge", challenge); err != nil {
+		ctx.ServerError("UserSignIn", err)
+		return
+	}
+	ctx.JSON(200, challenge.SignRequest(regs.ToRegistrations()))
+}
+
+// U2FSign authenticates the user by signResp
+func U2FSign(ctx *context.Context, signResp u2f.SignResponse) {
+	challSess := ctx.Session.Get("u2fChallenge")
+	idSess := ctx.Session.Get("twofaUid")
+	if challSess == nil || idSess == nil {
+		ctx.ServerError("UserSignIn", errors.New("not in U2F session"))
+		return
+	}
+	challenge := challSess.(*u2f.Challenge)
+	id := idSess.(int64)
+	regs, err := models.GetU2FRegistrationsByUID(id)
+	if err != nil {
+		ctx.ServerError("UserSignIn", err)
+		return
+	}
+	for _, reg := range regs {
+		r, err := reg.Parse()
+		if err != nil {
+			log.Fatal(4, "parsing u2f registration: %v", err)
+			continue
+		}
+		newCounter, authErr := r.Authenticate(signResp, *challenge, reg.Counter)
+		if authErr == nil {
+			reg.Counter = newCounter
+			user, err := models.GetUserByID(id)
+			if err != nil {
+				ctx.ServerError("UserSignIn", err)
+				return
+			}
+			remember := ctx.Session.Get("twofaRemember").(bool)
+			if err := reg.UpdateCounter(); err != nil {
+				ctx.ServerError("UserSignIn", err)
+				return
+			}
+
+			if ctx.Session.Get("linkAccount") != nil {
+				gothUser := ctx.Session.Get("linkAccountGothUser")
+				if gothUser == nil {
+					ctx.ServerError("UserSignIn", errors.New("not in LinkAccount session"))
+					return
+				}
+
+				err = models.LinkAccountToUser(user, gothUser.(goth.User))
+				if err != nil {
+					ctx.ServerError("UserSignIn", err)
+					return
+				}
+			}
+			redirect := handleSignInFull(ctx, user, remember, false)
+			if redirect == "" {
+				redirect = setting.AppSubURL + "/"
+			}
+			ctx.PlainText(200, []byte(redirect))
+			return
+		}
+	}
+	ctx.Error(401)
 }
 
 // This handles the final part of the sign-in process of the user.
@@ -317,7 +435,7 @@ func handleSignIn(ctx *context.Context, u *models.User, remember bool) {
 	handleSignInFull(ctx, u, remember, true)
 }
 
-func handleSignInFull(ctx *context.Context, u *models.User, remember bool, obeyRedirect bool) {
+func handleSignInFull(ctx *context.Context, u *models.User, remember bool, obeyRedirect bool) string {
 	if remember {
 		days := 86400 * setting.LogInRememberDays
 		ctx.SetCookie(setting.CookieUserName, u.Name, days, setting.AppSubURL)
@@ -331,8 +449,22 @@ func handleSignInFull(ctx *context.Context, u *models.User, remember bool, obeyR
 	ctx.Session.Delete("openid_determined_username")
 	ctx.Session.Delete("twofaUid")
 	ctx.Session.Delete("twofaRemember")
+	ctx.Session.Delete("u2fChallenge")
+	ctx.Session.Delete("linkAccount")
 	ctx.Session.Set("uid", u.ID)
 	ctx.Session.Set("uname", u.Name)
+
+	// Language setting of the user overwrites the one previously set
+	// If the user does not have a locale set, we save the current one.
+	if len(u.Language) == 0 {
+		u.Language = ctx.Locale.Language()
+		if err := models.UpdateUserCols(u, "language"); err != nil {
+			log.Error(4, fmt.Sprintf("Error updating user language [user: %d, locale: %s]", u.ID, u.Language))
+			return setting.AppSubURL + "/"
+		}
+	}
+
+	ctx.SetCookie("lang", u.Language, nil, setting.AppSubURL)
 
 	// Clear whatever CSRF has right now, force to generate a new one
 	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubURL)
@@ -341,7 +473,7 @@ func handleSignInFull(ctx *context.Context, u *models.User, remember bool, obeyR
 	u.SetLastLogin()
 	if err := models.UpdateUserCols(u, "last_login_unix"); err != nil {
 		ctx.ServerError("UpdateUserCols", err)
-		return
+		return setting.AppSubURL + "/"
 	}
 
 	if redirectTo, _ := url.QueryUnescape(ctx.GetCookie("redirect_to")); len(redirectTo) > 0 && !util.IsExternalURL(redirectTo) {
@@ -349,12 +481,13 @@ func handleSignInFull(ctx *context.Context, u *models.User, remember bool, obeyR
 		if obeyRedirect {
 			ctx.RedirectToFirst(redirectTo)
 		}
-		return
+		return redirectTo
 	}
 
 	if obeyRedirect {
 		ctx.Redirect(setting.AppSubURL + "/")
 	}
+	return setting.AppSubURL + "/"
 }
 
 // SignInOAuth handles the OAuth2 login buttons
@@ -450,6 +583,14 @@ func handleOAuth2SignIn(u *models.User, gothUser goth.User, ctx *context.Context
 	// User needs to use 2FA, save data and redirect to 2FA page.
 	ctx.Session.Set("twofaUid", u.ID)
 	ctx.Session.Set("twofaRemember", false)
+
+	// If U2F is enrolled -> Redirect to U2F instead
+	regs, err := models.GetU2FRegistrationsByUID(u.ID)
+	if err == nil && len(regs) > 0 {
+		ctx.Redirect(setting.AppSubURL + "/user/u2f")
+		return
+	}
+
 	ctx.Redirect(setting.AppSubURL + "/user/two_factor")
 }
 
@@ -576,6 +717,13 @@ func LinkAccountPostSignIn(ctx *context.Context, signInForm auth.SignInForm) {
 	ctx.Session.Set("twofaRemember", signInForm.Remember)
 	ctx.Session.Set("linkAccount", true)
 
+	// If U2F is enrolled -> Redirect to U2F instead
+	regs, err := models.GetU2FRegistrationsByUID(u.ID)
+	if err == nil && len(regs) > 0 {
+		ctx.Redirect(setting.AppSubURL + "/user/u2f")
+		return
+	}
+
 	ctx.Redirect(setting.AppSubURL + "/user/two_factor")
 }
 
@@ -699,6 +847,7 @@ func SignOut(ctx *context.Context) {
 	ctx.SetCookie(setting.CookieUserName, "", -1, setting.AppSubURL)
 	ctx.SetCookie(setting.CookieRememberName, "", -1, setting.AppSubURL)
 	ctx.SetCookie(setting.CSRFCookieName, "", -1, setting.AppSubURL)
+	ctx.SetCookie("lang", "", -1, setting.AppSubURL) // Setting the lang cookie will trigger the middleware to reset the language ot previous state.
 	ctx.Redirect(setting.AppSubURL + "/")
 }
 
@@ -723,7 +872,8 @@ func SignUpPost(ctx *context.Context, cpt *captcha.Captcha, form auth.RegisterFo
 
 	ctx.Data["EnableCaptcha"] = setting.Service.EnableCaptcha
 
-	if setting.Service.DisableRegistration {
+	//Permission denied if DisableRegistration or AllowOnlyExternalRegistration options are true
+	if !setting.Service.ShowRegistrationButton {
 		ctx.Error(403)
 		return
 	}

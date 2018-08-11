@@ -30,10 +30,15 @@ case "$1" in
             # Make sure gitea can access files
             if [ -d /var/lib/gitea ]; then
                 chown gitea:gitea /var/lib/gitea
-                chown gitea:gitea /var/lib/gitea/*
-                chown gitea:gitea /etc/gitea/conf
+                chown gitea:gitea /var/lib/gitea/data
+                chown gitea:gitea /var/lib/gitea/repositories
             fi
         fi
+
+        ##
+        # Unavailable internal commands:
+        #   runGenerateInternalToken, runGenerateLfsJwtSecret, runGenerateSecretKey
+        ##
 
         # Set a unique secret key if one hasn't been provided
         if grep -q 'Xx-secret-key-xX' /etc/gitea/conf/app.ini; then

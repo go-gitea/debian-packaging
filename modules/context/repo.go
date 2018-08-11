@@ -85,9 +85,9 @@ func (r *Repository) CanCreateBranch() bool {
 }
 
 // CanCommitToBranch returns true if repository is editable and user has proper access level
-//   and branch is not protected
+//   and branch is not protected for push
 func (r *Repository) CanCommitToBranch(doer *models.User) (bool, error) {
-	protectedBranch, err := r.Repository.IsProtectedBranch(r.BranchName, doer)
+	protectedBranch, err := r.Repository.IsProtectedBranchForPush(r.BranchName, doer)
 	if err != nil {
 		return false, err
 	}
@@ -99,8 +99,9 @@ func (r *Repository) CanUseTimetracker(issue *models.Issue, user *models.User) b
 	// Checking for following:
 	// 1. Is timetracker enabled
 	// 2. Is the user a contributor, admin, poster or assignee and do the repository policies require this?
+	isAssigned, _ := models.IsUserAssignedToIssue(issue, user)
 	return r.Repository.IsTimetrackerEnabled() && (!r.Repository.AllowOnlyContributorsToTrackTime() ||
-		r.IsWriter() || issue.IsPoster(user.ID) || issue.AssigneeID == user.ID)
+		r.IsWriter() || issue.IsPoster(user.ID) || isAssigned)
 }
 
 // GetCommitsCount returns cached commit count for current view

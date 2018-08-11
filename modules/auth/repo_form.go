@@ -113,6 +113,9 @@ type RepoSettingForm struct {
 	PullsAllowSquash                 bool
 	EnableTimetracker                bool
 	AllowOnlyContributorsToTrackTime bool
+
+	// Admin settings
+	EnableHealthCheck bool
 }
 
 // Validate validates the fields
@@ -129,10 +132,13 @@ func (f *RepoSettingForm) Validate(ctx *macaron.Context, errs binding.Errors) bi
 
 // ProtectBranchForm form for changing protected branch settings
 type ProtectBranchForm struct {
-	Protected       bool
-	EnableWhitelist bool
-	WhitelistUsers  string
-	WhitelistTeams  string
+	Protected            bool
+	EnableWhitelist      bool
+	WhitelistUsers       string
+	WhitelistTeams       string
+	EnableMergeWhitelist bool
+	MergeWhitelistUsers  string
+	MergeWhitelistTeams  string
 }
 
 // Validate validates the fields
@@ -149,12 +155,17 @@ func (f *ProtectBranchForm) Validate(ctx *macaron.Context, errs binding.Errors) 
 
 // WebhookForm form for changing web hook
 type WebhookForm struct {
-	Events      string
-	Create      bool
-	Push        bool
-	PullRequest bool
-	Repository  bool
-	Active      bool
+	Events       string
+	Create       bool
+	Delete       bool
+	Fork         bool
+	Issues       bool
+	IssueComment bool
+	Release      bool
+	Push         bool
+	PullRequest  bool
+	Repository   bool
+	Active       bool
 }
 
 // PushOnly if the hook will be triggered when push
@@ -248,6 +259,7 @@ func (f *NewDingtalkHookForm) Validate(ctx *macaron.Context, errs binding.Errors
 type CreateIssueForm struct {
 	Title       string `binding:"Required;MaxSize(255)"`
 	LabelIDs    string `form:"label_ids"`
+	AssigneeIDs string `form:"assignee_ids"`
 	Ref         string `form:"ref"`
 	MilestoneID int64
 	AssigneeID  int64
@@ -310,9 +322,10 @@ func (f *CreateMilestoneForm) Validate(ctx *macaron.Context, errs binding.Errors
 
 // CreateLabelForm form for creating label
 type CreateLabelForm struct {
-	ID    int64
-	Title string `binding:"Required;MaxSize(50)" locale:"repo.issues.label_name"`
-	Color string `binding:"Required;Size(7)" locale:"repo.issues.label_color"`
+	ID          int64
+	Title       string `binding:"Required;MaxSize(50)" locale:"repo.issues.label_title"`
+	Description string `binding:"MaxSize(200)" locale:"repo.issues.label_description"`
+	Color       string `binding:"Required;Size(7)" locale:"repo.issues.label_color"`
 }
 
 // Validate validates the fields
@@ -358,7 +371,7 @@ func (f *MergePullRequestForm) Validate(ctx *macaron.Context, errs binding.Error
 
 // NewReleaseForm form for creating release
 type NewReleaseForm struct {
-	TagName    string `binding:"Required"`
+	TagName    string `binding:"Required;GitRefName"`
 	Target     string `form:"tag_target" binding:"Required"`
 	Title      string `binding:"Required"`
 	Content    string
@@ -507,5 +520,20 @@ type AddTimeManuallyForm struct {
 
 // Validate validates the fields
 func (f *AddTimeManuallyForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
+	return validate(errs, ctx.Data, f, ctx.Locale)
+}
+
+// SaveTopicForm form for save topics for repository
+type SaveTopicForm struct {
+	Topics []string `binding:"topics;Required;"`
+}
+
+// DeadlineForm hold the validation rules for deadlines
+type DeadlineForm struct {
+	DateString string `form:"date" binding:"Required;Size(10)"`
+}
+
+// Validate validates the fields
+func (f *DeadlineForm) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
 	return validate(errs, ctx.Data, f, ctx.Locale)
 }
